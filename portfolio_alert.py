@@ -479,31 +479,37 @@ def main():
         kakao_text += "multpl.com/shiller-pe 확인 후\n"
         kakao_text += "CAPE_MANUAL 값 수정하세요\n"
     kakao_text += "━━━━━━━━━━━━━━━━━━━━━\n"
-    kakao_text += "₿ BTC 탱젬 잔고\n"
-    if btc_balance is not None:
-        kakao_text += f"잔고:  {btc_balance} BTC\n"
-        kakao_text += f"BTC:   ${btc_usd:,.2f}\n"
-        kakao_text += f"환율:  {usdkrw:,.0f}원\n"
-        kakao_text += f"평가액: {btc_total_krw:,.0f}원\n"
-    else:
-        kakao_text += "잔고 조회 실패\n"
 
-    # 포트폴리오 현황
-    kakao_text += "━━━━━━━━━━━━━━━━━━━━━\n"
-    kakao_text += "📂 포트폴리오 현황 (V0.5H 기준)\n"
+    # 포트폴리오 현황 — 2번째 메시지로 분리
+    kakao_text2  = f"📂 포트폴리오 현황 (V0.5H 기준) | {now}\n"
+    kakao_text2 += "━━━━━━━━━━━━━━━━━━━━━\n"
     if portfolio:
         for p in portfolio:
             diff_e = "🟢" if abs(p["diff"]) <= 3 else ("🟡" if abs(p["diff"]) <= 7 else "🔴")
             sign = "+" if p["diff"] >= 0 else ""
-            kakao_text += f"{p['name'][:8]:8} {p['pct']:.1f}% (목표{p['target']}% {sign}{p['diff']}%){diff_e}\n"
-        kakao_text += f"총평가액: {port_total:,.0f}원 (환율:{usdkrw:,.0f})\n"
+            kakao_text2 += f"{p['name'][:8]:8} {p['pct']:.1f}% (목표{p['target']}% {sign}{p['diff']}%){diff_e}\n"
+        kakao_text2 += f"총평가액: {port_total:,.0f}원\n"
+        kakao_text2 += f"환율: {usdkrw:,.0f}원\n"
     else:
-        kakao_text += "조회 실패\n"
+        kakao_text2 += "포트폴리오 조회 실패\n"
+    kakao_text2 += "━━━━━━━━━━━━━━━━━━━━━\n"
+    kakao_text2 += "₿ BTC 탱젬 잔고\n"
+    if btc_balance is not None:
+        kakao_text2 += f"잔고:  {btc_balance} BTC\n"
+        kakao_text2 += f"BTC:   ${btc_usd:,.2f}\n"
+        kakao_text2 += f"평가액: {btc_total_krw:,.0f}원\n"
+    else:
+        kakao_text2 += "잔고 조회 실패\n"
 
     if send_kakao(kakao_text):
-        print("✅ 카카오톡 발송 완료")
+        print("✅ 카카오톡 1번 발송 완료")
     else:
-        print("⚠️ 카카오톡 발송 실패")
+        print("⚠️ 카카오톡 1번 발송 실패")
+
+    if send_kakao(kakao_text2):
+        print("✅ 카카오톡 2번 발송 완료")
+    else:
+        print("⚠️ 카카오톡 2번 발송 실패")
 
     print("✅ 이메일 발송 완료")
 
