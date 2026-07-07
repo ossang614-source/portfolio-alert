@@ -1,0 +1,17 @@
+name: Daily Portfolio Alert
+
+on:
+  schedule:
+    - cron: '0 0 * * 1-5'  # 평일 오전 9시 (UTC+9)
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - run: pip install yfinance requests xlrd
+      - run: python portfolio_alert.py
