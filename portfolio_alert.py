@@ -487,7 +487,7 @@ def main():
         for p in portfolio:
             diff_e = "🟢" if abs(p["diff"]) <= 3 else ("🟡" if abs(p["diff"]) <= 7 else "🔴")
             sign = "+" if p["diff"] >= 0 else ""
-            kakao_text2 += f"{p['name'][:8]:8} {p['pct']:.1f}% (목표{p['target']}% {sign}{p['diff']}%){diff_e}\n"
+            kakao_text2 += f"{p['name']} {p['pct']:.1f}% (목표{p['target']}% {sign}{p['diff']}%){diff_e}\n"
         kakao_text2 += f"총평가액: {port_total:,.0f}원\n"
         kakao_text2 += f"환율: {usdkrw:,.0f}원\n"
     else:
