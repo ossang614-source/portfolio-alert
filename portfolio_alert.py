@@ -330,8 +330,8 @@ def get_portfolio_status(usdkrw):
             "BRK-B":     {"qty": 56,  "type": "us", "name": "BRK.B"},
             "GLD":       {"qty": 19,  "type": "us", "name": "GLD"},
             "SCHD":      {"qty": 10,  "type": "us", "name": "SCHD"},
-            "360750.KS": {"qty": 190, "type": "kr", "name": "TIGER S&P500"},
-            "458730.KS": {"qty": 353, "type": "kr", "name": "TIGER 배당다우존스"},
+            "360750.KS": {"qty": 252, "type": "kr", "name": "TIGER S&P500"},
+            "458730.KS": {"qty": 466, "type": "kr", "name": "TIGER 배당다우존스"},
             "102110.KS": {"qty": 56,  "type": "kr", "name": "TIGER 200"},
         }
 
@@ -498,6 +498,11 @@ def main():
         kakao_text2 += f"잔고:  {btc_balance} BTC\n"
         kakao_text2 += f"BTC:   ${btc_usd:,.2f}\n"
         kakao_text2 += f"평가액: {btc_total_krw:,.0f}원\n"
+        if port_total and port_total > 0:
+            btc_pct = round(btc_total_krw / port_total * 100, 2)
+            kakao_text2 += f"메인포트폴리오 대비: {btc_pct}%\n"
+        else:
+            kakao_text2 += "메인포트폴리오 대비: 계산불가(포트폴리오 조회 실패)\n"
     else:
         kakao_text2 += "잔고 조회 실패\n"
 
