@@ -336,10 +336,14 @@ def get_portfolio_status(usdkrw):
         }
 
         # V0.5(H) 목표 비중
+        # SCHD(미국)와 458730.KS(TIGER 배당다우존스, 국내 동일지수 ETF)는
+        # 동일 자산군(SCHD 슬롯)으로 합산 목표 10%를 공유함 — 별도 슬롯 아님
         targets = {
             "BRK-B": 25, "GLD": 15, "SCHD": 10,
-            "360750.KS": 35, "458730.KS": 10, "102110.KS": 10
+            "360750.KS": 35, "458730.KS": 0, "102110.KS": 10
         }
+        SCHD_GROUP_TICKERS = ("SCHD", "458730.KS")
+        SCHD_GROUP_TARGET = 10
 
         total = 0
         values = {}
@@ -360,12 +364,27 @@ def get_portfolio_status(usdkrw):
                 values[ticker] = {"val": 0, "price": 0, "info": info}
 
         result = []
+        schd_group_val = 0
         for ticker, data in values.items():
+            if ticker in SCHD_GROUP_TICKERS:
+                schd_group_val += data["val"]
+                continue
             name = data["info"].get("name", ticker)
             pct = round(data["val"] / total * 100, 1) if total > 0 else 0
             target = targets.get(ticker, 0)
             diff = round(pct - target, 1)
             result.append({"name": name, "pct": pct, "target": target, "diff": diff, "val": data["val"]})
+
+        # SCHD + TIGER 배당다우존스 합산 1줄
+        schd_pct = round(schd_group_val / total * 100, 1) if total > 0 else 0
+        schd_diff = round(schd_pct - SCHD_GROUP_TARGET, 1)
+        result.append({
+            "name": "SCHD+배당다우",
+            "pct": schd_pct,
+            "target": SCHD_GROUP_TARGET,
+            "diff": schd_diff,
+            "val": schd_group_val
+        })
 
         return result, total
     except:
