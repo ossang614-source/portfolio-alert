@@ -141,7 +141,7 @@ def indicator_color(value, ok_min, ok_max):
         return "#22c55e"
     return "#ef4444"
 
-def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts, cape):
+def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts, cape, portfolio=None, port_total=None, usdkrw=None, current_phase=None):
     fg_str = str(fg) if fg is not None else "수동확인"
 
     # 지표별 상태 색상
@@ -162,6 +162,37 @@ def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts,
             </tr>"""
     else:
         alert_rows = '<tr><td colspan="2" style="padding:10px 14px;color:#22c55e;text-align:center">✅ 전환 신호 없음 — 현재 단계 유지</td></tr>'
+
+    portfolio_rows = ""
+    portfolio_footer = ""
+    if portfolio:
+        REBAL_CHECK_MONTHS = (1, 4, 7, 10)
+        is_check_month = datetime.now().month in REBAL_CHECK_MONTHS
+        breached = []
+        for p in portfolio:
+            band = min(5.0, p["target"] * 0.25)
+            is_breach = abs(p["diff"]) > band
+            if is_breach:
+                breached.append(p["name"])
+            row_color = "#ef4444" if is_breach else "#22c55e"
+            sign = "+" if p["diff"] >= 0 else ""
+            portfolio_rows += f"""
+            <tr style="background:{'#1a0000' if is_breach else '#001400'}22">
+              <td style="padding:8px 14px;color:#ccc;font-size:12px">{p['name']}</td>
+              <td style="padding:8px 14px;color:#fff;font-family:monospace;font-size:12px;text-align:right">{p['val']:,.0f}원</td>
+              <td style="padding:8px 14px;color:#888;font-family:monospace;font-size:12px;text-align:right">{p['pct']:.1f}%</td>
+              <td style="padding:8px 14px;color:#888;font-family:monospace;font-size:12px;text-align:right">목표{p['target']}%</td>
+              <td style="padding:8px 14px;color:{row_color};font-family:monospace;font-size:12px;text-align:right">{sign}{p['diff']}% (허용±{band:.1f}%)</td>
+            </tr>"""
+        if is_check_month:
+            portfolio_footer = (f"⚠️ 정기 점검월 — 리밸런싱 실행 권장: {', '.join(breached)}" if breached
+                                 else "✅ 정기 점검월 — 밴드 이내, 리밸런싱 불필요")
+        else:
+            next_month = min([m for m in REBAL_CHECK_MONTHS if m > datetime.now().month] or [REBAL_CHECK_MONTHS[0]])
+            portfolio_footer = (f"👀 모니터링 중(밴드 이탈: {', '.join(breached)}) — 실행은 {next_month}월 정기 점검 시" if breached
+                                 else f"👀 모니터링 중 — 다음 정기 점검: {next_month}월")
+    else:
+        portfolio_rows = '<tr><td colspan="5" style="padding:10px 14px;color:#ef4444;text-align:center">포트폴리오 조회 실패</td></tr>'
 
     html = f"""
 <!DOCTYPE html>
@@ -210,6 +241,21 @@ def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts,
     <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
       {alert_rows}
     </table>
+
+    <!-- 포트폴리오 현황 -->
+    <div style="font-size:10px;color:#555;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px">▸ 포트폴리오 현황 ({current_phase or '확인 필요'} 기준)</div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:8px">
+      <tr style="background:#111">
+        <td style="padding:8px 14px;color:#555;font-size:10px">종목</td>
+        <td style="padding:8px 14px;color:#555;font-size:10px;text-align:right">평가액</td>
+        <td style="padding:8px 14px;color:#555;font-size:10px;text-align:right">비중</td>
+        <td style="padding:8px 14px;color:#555;font-size:10px;text-align:right">목표</td>
+        <td style="padding:8px 14px;color:#555;font-size:10px;text-align:right">편차</td>
+      </tr>
+      {portfolio_rows}
+    </table>
+    <div style="font-size:11px;color:#888;margin-bottom:8px">총평가액: {f'{port_total:,.0f}원' if port_total else '-'} · 환율: {f'{usdkrw:,.0f}원' if usdkrw else '-'}</div>
+    <div style="font-size:12px;color:#ccc;margin-bottom:24px">{portfolio_footer}</div>
 
     <!-- 전환 기준 -->
     <div style="font-size:10px;color:#555;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px">▸ 단계별 전환 기준</div>
@@ -463,7 +509,7 @@ def main():
     else:
         subject = f"[Portfolio Alert] 일일 보고 — {now}"
 
-    html = build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts, cape)
+    html = build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts, cape, portfolio, port_total, usdkrw, current_phase)
     send_email(subject, html)
 
     # 카카오톡 요약 발송
@@ -555,7 +601,7 @@ def main():
                 breached.append(p["name"])
             diff_e = "🔴" if is_breach else "🟢"
             sign = "+" if p["diff"] >= 0 else ""
-            kakao_text2 += f"{p['name']} {p['pct']:.1f}% (목표{p['target']}% {sign}{p['diff']}% / 허용±{band:.1f}%){diff_e}\n"
+            kakao_text2 += f"{p['name']} {p['val']:,.0f}원 ({p['pct']:.1f}%, 목표{p['target']}% {sign}{p['diff']}% / 허용±{band:.1f}%){diff_e}\n"
         kakao_text2 += f"총평가액: {port_total:,.0f}원\n"
         kakao_text2 += f"환율: {usdkrw:,.0f}원\n"
         kakao_text2 += "━━━━━━━━━━━━━━━━━━━━━\n"
