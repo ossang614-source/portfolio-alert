@@ -17,24 +17,43 @@ FRED_API_KEY = "9f331b77e1bbec6e77f04a5afcbc4e75"
 # ============================================================
 
 def get_spy_data():
-    spy  = yf.Ticker("SPY")
-    hist = spy.history(period="1y")
-    current = hist['Close'].iloc[-1]
-    sma200  = hist['Close'].rolling(200).mean().iloc[-1]
-    delta = hist['Close'].diff()
-    gain  = delta.clip(lower=0).rolling(14).mean()
-    loss  = (-delta.clip(upper=0)).rolling(14).mean()
-    rs    = gain / loss
-    rsi   = (100 - (100 / (1 + rs))).iloc[-1]
-    sma200_pct = ((current - sma200) / sma200) * 100
-    return round(current, 2), round(sma200_pct, 2), round(rsi, 2)
+    try:
+        spy  = yf.Ticker("SPY")
+        hist = spy.history(period="1y")
+        if hist is None or hist.empty:
+            return None, None, None, "SPY history() 응답이 비어있음 (야후 API 응답 없음)"
+        if len(hist) < 200:
+            return None, None, None, f"SPY 데이터 {len(hist)}행 — 200일 미만이라 SMA200 계산 불가"
+        current = hist['Close'].iloc[-1]
+        sma200  = hist['Close'].rolling(200).mean().iloc[-1]
+        delta = hist['Close'].diff()
+        gain  = delta.clip(lower=0).rolling(14).mean()
+        loss  = (-delta.clip(upper=0)).rolling(14).mean()
+        rs    = gain / loss
+        rsi   = (100 - (100 / (1 + rs))).iloc[-1]
+        sma200_pct = ((current - sma200) / sma200) * 100
+        if any(map(lambda x: x is None or (hasattr(x, "__ne__") and x != x), [current, sma200_pct, rsi])):
+            return None, None, None, f"계산 결과 NaN — current={current}, sma200={sma200}, rsi={rsi}"
+        return round(float(current), 2), round(float(sma200_pct), 2), round(float(rsi), 2), None
+    except Exception as e:
+        return None, None, None, f"SPY 조회 예외: {type(e).__name__}: {e}"
 
 def get_qqq_sma200():
-    qqq  = yf.Ticker("QQQ")
-    hist = qqq.history(period="1y")
-    current = hist['Close'].iloc[-1]
-    sma200  = hist['Close'].rolling(200).mean().iloc[-1]
-    return round(((current - sma200) / sma200) * 100, 2)
+    try:
+        qqq  = yf.Ticker("QQQ")
+        hist = qqq.history(period="1y")
+        if hist is None or hist.empty:
+            return None, "QQQ history() 응답이 비어있음 (야후 API 응답 없음)"
+        if len(hist) < 200:
+            return None, f"QQQ 데이터 {len(hist)}행 — 200일 미만이라 SMA200 계산 불가"
+        current = hist['Close'].iloc[-1]
+        sma200  = hist['Close'].rolling(200).mean().iloc[-1]
+        pct = ((current - sma200) / sma200) * 100
+        if pct != pct:  # NaN check
+            return None, f"QQQ 계산 결과 NaN — current={current}, sma200={sma200}"
+        return round(float(pct), 2), None
+    except Exception as e:
+        return None, f"QQQ 조회 예외: {type(e).__name__}: {e}"
 
 def get_vix():
     vix  = yf.Ticker("^VIX")
@@ -141,7 +160,7 @@ def indicator_color(value, ok_min, ok_max):
         return "#22c55e"
     return "#ef4444"
 
-def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts, cape, portfolio=None, port_total=None, usdkrw=None, current_phase=None):
+def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts, cape, portfolio=None, port_total=None, usdkrw=None, current_phase=None, data_errors=None):
     fg_str = str(fg) if fg is not None else "수동확인"
 
     # 지표별 상태 색상
@@ -206,6 +225,11 @@ def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts,
       <div style="font-size:18px;font-weight:800;color:#fff">PORTFOLIO ALERT</div>
       <div style="font-size:11px;color:#444;margin-top:4px">{now}</div>
     </div>
+
+    {f'''<div style="background:#1a0000;border:1px solid #7f1d1d;border-radius:6px;padding:12px 14px;margin-bottom:20px">
+      <div style="color:#ef4444;font-weight:700;font-size:12px;margin-bottom:6px">🚨 데이터 조회 오류 — 아래 지표 신뢰 불가</div>
+      {"".join(f'<div style="color:#fca5a5;font-size:11px;margin-top:2px">· {e}</div>' for e in data_errors)}
+    </div>''' if data_errors else ''}
 
     <!-- 지표 현황 -->
     <div style="font-size:10px;color:#555;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px">▸ 지표 현황</div>
@@ -380,9 +404,10 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
             "SCHP":      {"qty": 0,   "type": "us", "name": "SCHP"},
             "QQQ":       {"qty": 0,   "type": "us", "name": "QQQ"},
             "PDBC":      {"qty": 0,   "type": "us", "name": "PDBC"},
+            "VOO":       {"qty": 1,   "type": "us", "name": "VOO"},
             "360750.KS": {"qty": 252, "type": "kr", "name": "TIGER S&P500"},
             "458730.KS": {"qty": 466, "type": "kr", "name": "TIGER 배당다우존스"},
-            "102110.KS": {"qty": 56,  "type": "kr", "name": "TIGER 200"},
+            "102110.KS": {"qty": 60,  "type": "kr", "name": "TIGER 200"},
         }
 
         # 단계별 목표 비중 (Portfolio System v3.0, SCHP 편입 반영)
@@ -399,6 +424,8 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
         targets = TARGETS_BY_PHASE.get(phase, TARGETS_BY_PHASE["V0.5(H)"])
         SCHD_GROUP_TICKERS = ("SCHD", "458730.KS")
         SCHD_GROUP_TARGET = targets.get("SCHD_GROUP", 0)
+        SP500_GROUP_TICKERS = ("360750.KS", "VOO")
+        SP500_GROUP_TARGET = targets.get("360750.KS", 0)
 
         total = 0
         values = {}
@@ -423,9 +450,13 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
 
         result = []
         schd_group_val = 0
+        sp500_group_val = 0
         for ticker, data in values.items():
             if ticker in SCHD_GROUP_TICKERS:
                 schd_group_val += data["val"]
+                continue
+            if ticker in SP500_GROUP_TICKERS:
+                sp500_group_val += data["val"]
                 continue
             name = data["info"].get("name", ticker)
             pct = round(data["val"] / total * 100, 1) if total > 0 else 0
@@ -442,6 +473,17 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
             "target": SCHD_GROUP_TARGET,
             "diff": schd_diff,
             "val": schd_group_val
+        })
+
+        # TIGER S&P500 + VOO 합산 1줄 (동일 지수 국내·미국 대체 티커)
+        sp500_pct = round(sp500_group_val / total * 100, 1) if total > 0 else 0
+        sp500_diff = round(sp500_pct - SP500_GROUP_TARGET, 1)
+        result.append({
+            "name": "S&P500(TIGER+VOO)",
+            "pct": sp500_pct,
+            "target": SP500_GROUP_TARGET,
+            "diff": sp500_diff,
+            "val": sp500_group_val
         })
 
         return result, total
@@ -471,8 +513,19 @@ def main():
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     print(f"[{now}] 지표 수집 시작...")
 
-    spy_price, sma200_pct, rsi = get_spy_data()
-    qqq_pct = get_qqq_sma200()
+    data_errors = []
+
+    spy_price, sma200_pct, rsi, spy_err = get_spy_data()
+    if spy_err:
+        data_errors.append(f"SPY/RSI/SMA200: {spy_err}")
+        print(f"[경고] {spy_err}")
+        spy_price, sma200_pct, rsi = 0, 0, 0  # 계산 크래시 방지용 안전값 (알림에는 오류로 별도 표시)
+
+    qqq_pct, qqq_err = get_qqq_sma200()
+    if qqq_err:
+        data_errors.append(f"QQQ SMA200: {qqq_err}")
+        print(f"[경고] {qqq_err}")
+        qqq_pct = 0
     vix     = get_vix()
     fg      = get_fg()
     ret5d   = get_5day_return()
@@ -509,7 +562,7 @@ def main():
     else:
         subject = f"[Portfolio Alert] 일일 보고 — {now}"
 
-    html = build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts, cape, portfolio, port_total, usdkrw, current_phase)
+    html = build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts, cape, portfolio, port_total, usdkrw, current_phase, data_errors)
     send_email(subject, html)
 
     # 카카오톡 요약 발송
@@ -531,14 +584,19 @@ def main():
 
     kakao_text  = f"📊 Portfolio Alert | {now}\n"
     kakao_text += "━━━━━━━━━━━━━━━━━━━━━\n"
+    if data_errors:
+        kakao_text += "🚨 데이터 조회 오류 — 아래 지표 신뢰 불가\n"
+        for e in data_errors:
+            kakao_text += f"  · {e}\n"
+        kakao_text += "━━━━━━━━━━━━━━━━━━━━━\n"
     kakao_text += "📌 지표 현황\n"
-    kakao_text += f"SPY    ${spy_price}\n"
+    kakao_text += f"SPY    {'오류' if spy_err else f'${spy_price}'}\n"
     kakao_text += f"CAPE   {cape if cape else '확인필요'}   {cape_e}(기준 ≥35)\n"
-    kakao_text += f"SMA200  {sma200_pct:+.1f}%  {sma_e}(기준 +15%)\n"
-    kakao_text += f"RSI    {rsi:.1f}   {rsi_e}(기준 ≥70)\n"
+    kakao_text += f"SMA200  {'오류' if spy_err else f'{sma200_pct:+.1f}%'}  {sma_e}(기준 +15%)\n"
+    kakao_text += f"RSI    {'오류' if spy_err else f'{rsi:.1f}'}   {rsi_e}(기준 ≥70)\n"
     kakao_text += f"VIX    {vix}   {vix_e}(기준 ≤18)\n"
     kakao_text += f"F&G    {fg if fg else '확인필요'}     {fg_e}(기준 40~60)\n"
-    kakao_text += f"QQQ    {qqq_pct:+.1f}%  {qqq_e}(기준 +20%)\n"
+    kakao_text += f"QQQ    {'오류' if qqq_err else f'{qqq_pct:+.1f}%'}  {qqq_e}(기준 +20%)\n"
     kakao_text += f"5일    {ret5d:+.1f}%   {ret_e}\n"
     kakao_text += "━━━━━━━━━━━━━━━━━━━━━\n"
     kakao_text += f"현재 단계: {current_phase}\n"
