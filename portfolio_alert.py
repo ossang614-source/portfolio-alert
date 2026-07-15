@@ -20,10 +20,15 @@ def get_spy_data():
     try:
         spy  = yf.Ticker("SPY")
         hist = spy.history(period="1y")
+        raw_shape = None if hist is None else hist.shape
+        nan_count = None if hist is None or hist.empty else int(hist['Close'].isna().sum())
         if hist is None or hist.empty:
-            return None, None, None, "SPY history() 응답이 비어있음 (야후 API 응답 없음)"
+            return None, None, None, f"SPY history() 응답이 비어있음 (야후 API 응답 없음) | yfinance={yf.__version__}"
+        if nan_count == len(hist):
+            return None, None, None, f"SPY Close 전체({nan_count}/{len(hist)}행) NaN — yfinance 버전({yf.__version__}) 또는 API 문제로 추정, 업그레이드 필요"
+        hist = hist.dropna(subset=['Close'])  # 당일 미체결/미반영 행(NaN) 제거
         if len(hist) < 200:
-            return None, None, None, f"SPY 데이터 {len(hist)}행 — 200일 미만이라 SMA200 계산 불가"
+            return None, None, None, f"SPY 유효 데이터 {len(hist)}행(원본{raw_shape}, NaN{nan_count}행) — 200일 미만"
         current = hist['Close'].iloc[-1]
         sma200  = hist['Close'].rolling(200).mean().iloc[-1]
         delta = hist['Close'].diff()
@@ -33,7 +38,7 @@ def get_spy_data():
         rsi   = (100 - (100 / (1 + rs))).iloc[-1]
         sma200_pct = ((current - sma200) / sma200) * 100
         if any(map(lambda x: x is None or (hasattr(x, "__ne__") and x != x), [current, sma200_pct, rsi])):
-            return None, None, None, f"계산 결과 NaN — current={current}, sma200={sma200}, rsi={rsi}"
+            return None, None, None, f"NaN 데이터 제거 후에도 계산 NaN(RSI 분모 0 등 edge case) — current={current}, sma200={sma200}, rsi={rsi}, yfinance={yf.__version__}"
         return round(float(current), 2), round(float(sma200_pct), 2), round(float(rsi), 2), None
     except Exception as e:
         return None, None, None, f"SPY 조회 예외: {type(e).__name__}: {e}"
@@ -42,15 +47,20 @@ def get_qqq_sma200():
     try:
         qqq  = yf.Ticker("QQQ")
         hist = qqq.history(period="1y")
+        raw_shape = None if hist is None else hist.shape
+        nan_count = None if hist is None or hist.empty else int(hist['Close'].isna().sum())
         if hist is None or hist.empty:
-            return None, "QQQ history() 응답이 비어있음 (야후 API 응답 없음)"
+            return None, f"QQQ history() 응답이 비어있음 (야후 API 응답 없음) | yfinance={yf.__version__}"
+        if nan_count == len(hist):
+            return None, f"QQQ Close 전체({nan_count}/{len(hist)}행) NaN — yfinance 버전({yf.__version__}) 또는 API 문제로 추정, 업그레이드 필요"
+        hist = hist.dropna(subset=['Close'])  # 당일 미체결/미반영 행(NaN) 제거
         if len(hist) < 200:
-            return None, f"QQQ 데이터 {len(hist)}행 — 200일 미만이라 SMA200 계산 불가"
+            return None, f"QQQ 유효 데이터 {len(hist)}행(원본{raw_shape}, NaN{nan_count}행) — 200일 미만"
         current = hist['Close'].iloc[-1]
         sma200  = hist['Close'].rolling(200).mean().iloc[-1]
         pct = ((current - sma200) / sma200) * 100
         if pct != pct:  # NaN check
-            return None, f"QQQ 계산 결과 NaN — current={current}, sma200={sma200}"
+            return None, f"QQQ NaN 데이터 제거 후에도 계산 NaN — current={current}, sma200={sma200}"
         return round(float(pct), 2), None
     except Exception as e:
         return None, f"QQQ 조회 예외: {type(e).__name__}: {e}"
@@ -100,10 +110,20 @@ def get_btc_price_krw():
         return None, None, None
 
 def get_5day_return():
-    spy  = yf.Ticker("SPY")
-    hist = spy.history(period="10d")
-    ret  = ((hist['Close'].iloc[-1] - hist['Close'].iloc[-6]) / hist['Close'].iloc[-6]) * 100
-    return round(ret, 2)
+    try:
+        spy  = yf.Ticker("SPY")
+        hist = spy.history(period="10d")
+        if hist is None or hist.empty:
+            return None, "SPY(5일) history() 응답이 비어있음"
+        hist = hist.dropna(subset=['Close'])
+        if len(hist) < 6:
+            return None, f"SPY(5일) 유효 데이터 {len(hist)}행 — 6일 미만이라 계산 불가"
+        ret = ((hist['Close'].iloc[-1] - hist['Close'].iloc[-6]) / hist['Close'].iloc[-6]) * 100
+        if ret != ret:
+            return None, "SPY(5일) 계산 결과 NaN"
+        return round(float(ret), 2), None
+    except Exception as e:
+        return None, f"SPY(5일) 조회 예외: {type(e).__name__}: {e}"
 
 def check_phases(sma200_pct, rsi, qqq_pct, vix, fg, ret5d, cape):
     alerts = []
@@ -528,7 +548,11 @@ def main():
         qqq_pct = 0
     vix     = get_vix()
     fg      = get_fg()
-    ret5d   = get_5day_return()
+    ret5d, ret5d_err = get_5day_return()
+    if ret5d_err:
+        data_errors.append(f"5거래일 수익률: {ret5d_err}")
+        print(f"[경고] {ret5d_err}")
+        ret5d = 0
     cape    = get_cape()
 
     alerts = check_phases(sma200_pct, rsi, qqq_pct, vix, fg, ret5d, cape)
@@ -597,7 +621,7 @@ def main():
     kakao_text += f"VIX    {vix}   {vix_e}(기준 ≤18)\n"
     kakao_text += f"F&G    {fg if fg else '확인필요'}     {fg_e}(기준 40~60)\n"
     kakao_text += f"QQQ    {'오류' if qqq_err else f'{qqq_pct:+.1f}%'}  {qqq_e}(기준 +20%)\n"
-    kakao_text += f"5일    {ret5d:+.1f}%   {ret_e}\n"
+    kakao_text += f"5일    {'오류' if ret5d_err else f'{ret5d:+.1f}%'}   {ret_e}\n"
     kakao_text += "━━━━━━━━━━━━━━━━━━━━━\n"
     kakao_text += f"현재 단계: {current_phase}\n"
     if current_phase == "확인 필요":
