@@ -1,6 +1,6 @@
 name: Daily Portfolio Alert
 
-on:
+"on":
   schedule:
     - cron: '0 0 * * 1-5'  # 평일 오전 9시 (UTC+9)
   workflow_dispatch:
