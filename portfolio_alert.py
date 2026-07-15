@@ -13,6 +13,8 @@ EMAIL_FROM   = "ossang614@gmail.com"
 EMAIL_TO     = "ossang614@gmail.com"
 EMAIL_PASS   = "fuvw zbun ydje supp"
 KAKAO_TOKEN  = "Rqmw5FYhctsUFOPNanK-wrCr3on3irAcAAAAAQoXIS0AAAGfMKLn4oE8pQXSEbh1"
+CNN_FG_URL   = "https://edition.cnn.com/markets/fear-and-greed"
+CAPE_URL     = "https://www.multpl.com/shiller-pe"
 FRED_API_KEY = "9f331b77e1bbec6e77f04a5afcbc4e75"
 # ============================================================
 
@@ -71,10 +73,10 @@ def get_vix():
     return round(hist['Close'].iloc[-1], 2)
 
 def get_fg():
-    return None  # CNN F&G 수동 확인 필요 (stocks.cnn.com/data/fear-and-greed)
+    return None  # CNN F&G 수동 확인 필요 (edition.cnn.com/markets/fear-and-greed)
 
 # ============================================================
-# CAPE 수동 입력 — 매월 1일 multpl.com/shiller-pe 확인 후 업데이트
+# CAPE 수동 입력 — 매월 1일 multpl.com/shiller-pe 확인 후 업데이트 (www.multpl.com/shiller-pe)
 # ============================================================
 CAPE_MANUAL = None  # 확인 후 수동 입력 (예: 41.6)
 # ============================================================
@@ -135,9 +137,9 @@ def check_phases(sma200_pct, rsi, qqq_pct, vix, fg, ret5d, cape):
     if v0_cape and v0_others:
         alerts.append(("🔴 V0 발동", "전 자산 V0 포트폴리오로 전환 검토", "#ef4444"))
     elif v0_others and cape is not None and not v0_cape:
-        alerts.append(("⚠️ V0 CAPE 확인 필수", f"VIX·RSI·이격도 조건 충족 — CAPE 수동 확인 후 V0 전환 판단\nmultpl.com/shiller-pe (현재입력값: {cape})", "#eab308"))
+        alerts.append(("⚠️ V0 CAPE 확인 필수", f"VIX·RSI·이격도 조건 충족 — CAPE 수동 확인 후 V0 전환 판단\nwww.multpl.com/shiller-pe (현재입력값: {cape})", "#eab308"))
     elif v0_others and cape is None:
-        alerts.append(("⚠️ V0 CAPE 확인 필수", "VIX·RSI·이격도 조건 충족 — CAPE 미입력\nmultpl.com/shiller-pe 확인 후 CAPE_MANUAL 업데이트 필요", "#eab308"))
+        alerts.append(("⚠️ V0 CAPE 확인 필수", "VIX·RSI·이격도 조건 충족 — CAPE 미입력\nwww.multpl.com/shiller-pe 확인 후 CAPE_MANUAL 업데이트 필요", "#eab308"))
 
     # V0.5(H)
     h1 = 0 <= sma200_pct <= 10
@@ -148,7 +150,7 @@ def check_phases(sma200_pct, rsi, qqq_pct, vix, fg, ret5d, cape):
 
     # F&G 미상 상태에서 나머지 조건이 2개 충족 — F&G가 결정적
     if fg is None and sum([h1, h3, h4]) == 2:
-        alerts.append(("⚠️ F&G 확인 필수 (V0.5H)", "나머지 조건 2개 충족 — F&G 확인 후 V0.5(H) 전환 판단\nstocks.cnn.com/data/fear-and-greed", "#f97316"))
+        alerts.append(("⚠️ F&G 확인 필수 (V0.5H)", "나머지 조건 2개 충족 — F&G 40~60 확인 후 V0.5(H) 전환 판단\nedition.cnn.com/markets/fear-and-greed", "#f97316"))
 
     if h_count >= 3:
         alerts.append((f"🟠 V0.5(H) 충족", f"{h_count}/4개 조건 충족", "#f97316"))
@@ -167,11 +169,11 @@ def check_phases(sma200_pct, rsi, qqq_pct, vix, fg, ret5d, cape):
     c_vix = vix <= 22
     c_rsi = rsi >= 38
     if fg is None and c_vix and c_rsi:
-        alerts.append(("⚠️ F&G 확인 필수 (V0.5C)", "VIX·RSI 조건 충족 — F&G ≥ 40 확인 후 V0.5(C) 전환 판단\nstocks.cnn.com/data/fear-and-greed", "#38bdf8"))
+        alerts.append(("⚠️ F&G 확인 필수 (V0.5C)", "VIX·RSI 조건 충족 — F&G ≥ 40 확인 후 V0.5(C) 전환 판단\nedition.cnn.com/markets/fear-and-greed", "#38bdf8"))
 
     # V1.0 진입 조건: F&G ≥ 45 — F&G 결정적
     if fg is None and sma200_pct > 0:
-        alerts.append(("⚠️ F&G 확인 필수 (V1.0)", "SMA200 상향 — F&G ≥ 45 확인 후 V1.0 진입 판단\nstocks.cnn.com/data/fear-and-greed", "#22c55e"))
+        alerts.append(("⚠️ F&G 확인 필수 (V1.0)", "SMA200 상향 — F&G ≥ 45 확인 후 V1.0 진입 판단\nedition.cnn.com/markets/fear-and-greed", "#22c55e"))
 
     return alerts
 
@@ -180,7 +182,7 @@ def indicator_color(value, ok_min, ok_max):
         return "#22c55e"
     return "#ef4444"
 
-def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts, cape, portfolio=None, port_total=None, usdkrw=None, current_phase=None, data_errors=None):
+def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts, cape, portfolio=None, port_total=None, usdkrw=None, current_phase=None, data_errors=None, btc_balance=None, btc_usd=None, btc_total_krw=None):
     fg_str = str(fg) if fg is not None else "수동확인"
 
     # 지표별 상태 색상
@@ -233,6 +235,36 @@ def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts,
     else:
         portfolio_rows = '<tr><td colspan="5" style="padding:10px 14px;color:#ef4444;text-align:center">포트폴리오 조회 실패</td></tr>'
 
+    btc_section = ""
+    if btc_balance is not None:
+        btc_pct_str = "-"
+        if port_total and port_total > 0 and btc_total_krw is not None:
+            btc_pct_str = f"{round(btc_total_krw / port_total * 100, 2)}%"
+        btc_section = f"""
+    <div style="font-size:10px;color:#555;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px">▸ ₿ BTC 텐젬 잔고</div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
+      <tr style="background:#111">
+        <td style="padding:8px 14px;color:#888;font-size:12px">잔고</td>
+        <td style="padding:8px 14px;color:#fff;font-family:monospace;font-size:12px;text-align:right">{btc_balance} BTC</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 14px;color:#888;font-size:12px">BTC 가격</td>
+        <td style="padding:8px 14px;color:#fff;font-family:monospace;font-size:12px;text-align:right">${btc_usd:,.2f}</td>
+      </tr>
+      <tr style="background:#111">
+        <td style="padding:8px 14px;color:#888;font-size:12px">평가액</td>
+        <td style="padding:8px 14px;color:#fff;font-family:monospace;font-size:12px;text-align:right">{btc_total_krw:,.0f}원</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 14px;color:#888;font-size:12px">메인포트폴리오 대비</td>
+        <td style="padding:8px 14px;color:#eab308;font-family:monospace;font-size:12px;text-align:right">{btc_pct_str}</td>
+      </tr>
+    </table>"""
+    else:
+        btc_section = """
+    <div style="font-size:10px;color:#555;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px">▸ ₿ BTC 텐젬 잔고</div>
+    <div style="color:#ef4444;font-size:12px;margin-bottom:24px">잔고 조회 실패</div>"""
+
     html = f"""
 <!DOCTYPE html>
 <html>
@@ -273,9 +305,9 @@ def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts,
         <td style="padding:10px 14px;font-weight:700;color:{vix_color};font-family:monospace">{vix}</td>
       </tr>
       <tr style="background:#0d0d0d">
-        <td style="padding:10px 14px;color:#888;font-size:12px">F&G</td>
+        <td style="padding:10px 14px;color:#888;font-size:12px">F&G <a href="{CNN_FG_URL}" style="color:#555;font-size:9px;text-decoration:underline">(출처)</a></td>
         <td style="padding:10px 14px;font-weight:700;color:{fg_color};font-family:monospace">{fg_str}</td>
-        <td style="padding:10px 14px;color:#888;font-size:12px">CAPE</td>
+        <td style="padding:10px 14px;color:#888;font-size:12px">CAPE <a href="{CAPE_URL}" style="color:#555;font-size:9px;text-decoration:underline">(출처)</a></td>
         <td style="padding:10px 14px;font-weight:700;color:{'#ef4444' if cape and cape >= 35 else '#22c55e'};font-family:monospace">{cape if cape else '확인필요'}</td>
       </tr>
     </table>
@@ -300,6 +332,7 @@ def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts,
     </table>
     <div style="font-size:11px;color:#888;margin-bottom:8px">총평가액: {f'{port_total:,.0f}원' if port_total else '-'} · 환율: {f'{usdkrw:,.0f}원' if usdkrw else '-'}</div>
     <div style="font-size:12px;color:#ccc;margin-bottom:24px">{portfolio_footer}</div>
+    {btc_section}
 
     <!-- 전환 기준 -->
     <div style="font-size:10px;color:#555;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px">▸ 단계별 전환 기준</div>
@@ -379,7 +412,7 @@ def get_kakao_token():
         pass
     return KAKAO_TOKEN
 
-def send_kakao(text):
+def send_kakao(text, link_url=None):
     token = get_kakao_token()
     url   = "https://kapi.kakao.com/v2/api/talk/memo/default/send"
     headers = {"Authorization": f"Bearer {token}"}
@@ -387,7 +420,7 @@ def send_kakao(text):
         "template_object": json.dumps({
             "object_type": "text",
             "text": text,
-            "link": {"web_url": "https://stocks.cnn.com/data/fear-and-greed"}
+            "link": {"web_url": link_url or CNN_FG_URL}
         })
     }
     r = requests.post(url, headers=headers, data=data)
@@ -427,7 +460,7 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
             "VOO":       {"qty": 1,   "type": "us", "name": "VOO"},
             "360750.KS": {"qty": 252, "type": "kr", "name": "TIGER S&P500"},
             "458730.KS": {"qty": 466, "type": "kr", "name": "TIGER 배당다우존스"},
-            "102110.KS": {"qty": 60,  "type": "kr", "name": "TIGER 200"},
+            "102110.KS": {"qty": 56,  "type": "kr", "name": "TIGER 200"},
         }
 
         # 단계별 목표 비중 (Portfolio System v3.0, SCHP 편입 반영)
@@ -586,7 +619,7 @@ def main():
     else:
         subject = f"[Portfolio Alert] 일일 보고 — {now}"
 
-    html = build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts, cape, portfolio, port_total, usdkrw, current_phase, data_errors)
+    html = build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts, cape, portfolio, port_total, usdkrw, current_phase, data_errors, btc_balance, btc_usd, btc_total_krw)
     send_email(subject, html)
 
     # 카카오톡 요약 발송
@@ -665,7 +698,7 @@ def main():
     if datetime.now().day == 1:
         kakao_text += "━━━━━━━━━━━━━━━━━━━━━\n"
         kakao_text += "📋 CAPE 수동 업데이트 필요\n"
-        kakao_text += "multpl.com/shiller-pe 확인 후\n"
+        kakao_text += "www.multpl.com/shiller-pe 확인 후\n"
         kakao_text += "CAPE_MANUAL 값 수정하세요\n"
     kakao_text += "━━━━━━━━━━━━━━━━━━━━━\n"
 
@@ -714,12 +747,12 @@ def main():
     else:
         kakao_text2 += "잔고 조회 실패\n"
 
-    if send_kakao(kakao_text):
+    if send_kakao(kakao_text, link_url=CNN_FG_URL):
         print("✅ 카카오톡 1번 발송 완료")
     else:
         print("⚠️ 카카오톡 1번 발송 실패")
 
-    if send_kakao(kakao_text2):
+    if send_kakao(kakao_text2, link_url=CAPE_URL):
         print("✅ 카카오톡 2번 발송 완료")
     else:
         print("⚠️ 카카오톡 2번 발송 실패")
