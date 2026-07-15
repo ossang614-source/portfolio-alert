@@ -320,35 +320,47 @@ def send_email(subject, html_body):
         s.login(EMAIL_FROM, EMAIL_PASS)
         s.send_message(msg)
 
-def get_portfolio_status(usdkrw):
+def get_portfolio_status(usdkrw, phase="V0.5(H)"):
     try:
         if not usdkrw or usdkrw < 100:
             return None, None
 
         # 보유 수량 (도미노.xlsx 기준 수동 입력)
+        # SCHP, QQQ, PDBC: 2026-07 기준 미보유 (qty=0) — 매수 시 수량 갱신 필요
         holdings = {
             "BRK-B":     {"qty": 56,  "type": "us", "name": "BRK.B"},
             "GLD":       {"qty": 19,  "type": "us", "name": "GLD"},
             "SCHD":      {"qty": 10,  "type": "us", "name": "SCHD"},
+            "SCHP":      {"qty": 0,   "type": "us", "name": "SCHP"},
+            "QQQ":       {"qty": 0,   "type": "us", "name": "QQQ"},
+            "PDBC":      {"qty": 0,   "type": "us", "name": "PDBC"},
             "360750.KS": {"qty": 252, "type": "kr", "name": "TIGER S&P500"},
             "458730.KS": {"qty": 466, "type": "kr", "name": "TIGER 배당다우존스"},
             "102110.KS": {"qty": 56,  "type": "kr", "name": "TIGER 200"},
         }
 
-        # V0.5(H) 목표 비중
+        # 단계별 목표 비중 (Portfolio System v3.0, SCHP 편입 반영)
         # SCHD(미국)와 458730.KS(TIGER 배당다우존스, 국내 동일지수 ETF)는
-        # 동일 자산군(SCHD 슬롯)으로 합산 목표 10%를 공유함 — 별도 슬롯 아님
-        targets = {
-            "BRK-B": 25, "GLD": 15, "SCHD": 10,
-            "360750.KS": 35, "458730.KS": 0, "102110.KS": 10
+        # 동일 자산군(SCHD 슬롯)으로 SCHD_GROUP 목표를 공유함 — 별도 슬롯 아님
+        TARGETS_BY_PHASE = {
+            "V0":       {"BRK-B": 30, "360750.KS": 10, "SCHP": 20, "SCHD_GROUP": 10, "GLD": 15, "102110.KS": 10, "PDBC": 5},
+            "V0.5(H)":  {"BRK-B": 25, "360750.KS": 25, "SCHP": 10, "SCHD_GROUP": 10, "GLD": 15, "102110.KS": 10, "PDBC": 5},
+            "V0.5(C)":  {"BRK-B": 25, "360750.KS": 25, "SCHP": 10, "SCHD_GROUP": 10, "GLD": 15, "102110.KS": 10, "PDBC": 5},
+            "V1.0":     {"360750.KS": 50, "QQQ": 20, "GLD": 15, "102110.KS": 10, "PDBC": 5},
+            "ET":       {"BRK-B": 40, "SCHP": 35, "GLD": 15, "SCHD_GROUP": 10},
         }
+        # 단계 미확정 시 잠정 V0.5(H) 기준 적용 (호출부에서 별도 경고 표시)
+        targets = TARGETS_BY_PHASE.get(phase, TARGETS_BY_PHASE["V0.5(H)"])
         SCHD_GROUP_TICKERS = ("SCHD", "458730.KS")
-        SCHD_GROUP_TARGET = 10
+        SCHD_GROUP_TARGET = targets.get("SCHD_GROUP", 0)
 
         total = 0
         values = {}
         for ticker, info in holdings.items():
             try:
+                if info["qty"] == 0:
+                    values[ticker] = {"val": 0, "price": 0, "info": info}
+                    continue
                 t = yf.Ticker(ticker)
                 price = t.history(period="1d")['Close'].iloc[-1]
                 if info["type"] == "us":
@@ -375,7 +387,7 @@ def get_portfolio_status(usdkrw):
             diff = round(pct - target, 1)
             result.append({"name": name, "pct": pct, "target": target, "diff": diff, "val": data["val"]})
 
-        # SCHD + TIGER 배당다우존스 합산 1줄
+        # SCHD + TIGER 배당다우존스 합산 1줄 (target 있는 단계만 표시)
         schd_pct = round(schd_group_val / total * 100, 1) if total > 0 else 0
         schd_diff = round(schd_pct - SCHD_GROUP_TARGET, 1)
         result.append({
@@ -389,6 +401,25 @@ def get_portfolio_status(usdkrw):
         return result, total
     except:
         return None, None
+
+def determine_phase(v0_cape, v0_others, h_count, vix, et_count, c_vix, c_rsi, fg):
+    """
+    당일 지표 기준 단계 판별. 이력(직전 단계) 정보 없이 계산하므로
+    'ET→V0.5(C) 경유 필수', 'V0.5(H)→V1.0 직접전환 불가' 같은
+    경로 의존 규칙은 반영되지 않음 — 참고용 판별이며 최종 확인은 수동으로 할 것.
+    V1.0은 50주선 데이터 미수집으로 자동판별 대상에서 제외.
+    """
+    if vix >= 40:
+        return "ET"
+    if et_count >= 2:
+        return "ET"
+    if v0_cape and v0_others:
+        return "V0"
+    if h_count >= 3:
+        return "V0.5(H)"
+    if c_vix and c_rsi and fg is not None and fg >= 40:
+        return "V0.5(C)"
+    return "확인 필요"
 
 def main():
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -404,13 +435,28 @@ def main():
     alerts = check_phases(sma200_pct, rsi, qqq_pct, vix, fg, ret5d, cape)
 
     # V0 판단 변수 (카카오 메시지용)
-    v0_cape = cape is not None and cape >= 35
 
     btc_balance = get_btc_balance()
     btc_usd, usdkrw, btc_krw_unit = get_btc_price_krw()
     btc_total_krw = round(btc_balance * btc_krw_unit, 0) if btc_balance and btc_krw_unit else None
 
-    portfolio, port_total = get_portfolio_status(usdkrw)
+    # 현재 단계 판단 (당일 지표 기준, 이력 미반영 — determine_phase() 주석 참고)
+    v0_cape = cape is not None and cape >= 35
+    v0_others = vix <= 18 and rsi >= 70 and (sma200_pct >= 15 or qqq_pct >= 20)
+    h1 = 0 <= sma200_pct <= 10
+    h2 = fg is not None and 40 <= fg <= 60
+    h3 = 14 <= vix <= 22
+    h4 = 40 <= rsi <= 60
+    h_count = sum([h1, h2, h3, h4])
+    et1 = rsi <= 32
+    et2 = vix >= 32
+    et3 = ret5d <= -6
+    et_count = sum([et1, et2, et3])
+    c_vix = vix <= 22
+    c_rsi = rsi >= 38
+    current_phase = determine_phase(v0_cape, v0_others, h_count, vix, et_count, c_vix, c_rsi, fg)
+
+    portfolio, port_total = get_portfolio_status(usdkrw, current_phase)
 
     if alerts:
         subject = f"[Portfolio Alert] 전환 신호 감지 — {now}"
@@ -437,14 +483,6 @@ def main():
 
     cape_e  = "🔴" if cape and cape >= 35 else "🟢"
 
-    # 현재 단계 판단
-    h1 = 0 <= sma200_pct <= 10
-    h2 = fg is not None and 40 <= fg <= 60
-    h3 = 14 <= vix <= 22
-    h4 = 40 <= rsi <= 60
-    h_count = sum([h1, h2, h3, h4])
-    current_phase = "V0.5(H)" if h_count >= 3 else "확인 필요"
-
     kakao_text  = f"📊 Portfolio Alert | {now}\n"
     kakao_text += "━━━━━━━━━━━━━━━━━━━━━\n"
     kakao_text += "📌 지표 현황\n"
@@ -458,6 +496,10 @@ def main():
     kakao_text += f"5일    {ret5d:+.1f}%   {ret_e}\n"
     kakao_text += "━━━━━━━━━━━━━━━━━━━━━\n"
     kakao_text += f"현재 단계: {current_phase}\n"
+    if current_phase == "확인 필요":
+        kakao_text += "⚠️ 단계 미확정 — 포트폴리오 목표치는 잠정 V0.5(H) 기준\n"
+    if current_phase == "V1.0":
+        kakao_text += "⚠️ V1.0은 자동판별 대상 아님(수동 확인 필요)\n"
     if alerts:
         for a in alerts:
             title = a[0] if isinstance(a, tuple) else a
@@ -500,15 +542,34 @@ def main():
     kakao_text += "━━━━━━━━━━━━━━━━━━━━━\n"
 
     # 포트폴리오 현황 — 2번째 메시지로 분리
-    kakao_text2  = f"📂 포트폴리오 현황 (V0.5H 기준) | {now}\n"
+    kakao_text2  = f"📂 포트폴리오 현황 ({current_phase} 기준) | {now}\n"
     kakao_text2 += "━━━━━━━━━━━━━━━━━━━━━\n"
     if portfolio:
+        REBAL_CHECK_MONTHS = (1, 4, 7, 10)
+        is_check_month = datetime.now().month in REBAL_CHECK_MONTHS
+        breached = []
         for p in portfolio:
-            diff_e = "🟢" if abs(p["diff"]) <= 3 else ("🟡" if abs(p["diff"]) <= 7 else "🔴")
+            band = min(5.0, p["target"] * 0.25)  # 5/25 룰: 절대 ±5%p 또는 목표비중의 25% 중 더 좁은 쪽
+            is_breach = abs(p["diff"]) > band
+            if is_breach:
+                breached.append(p["name"])
+            diff_e = "🔴" if is_breach else "🟢"
             sign = "+" if p["diff"] >= 0 else ""
-            kakao_text2 += f"{p['name']} {p['pct']:.1f}% (목표{p['target']}% {sign}{p['diff']}%){diff_e}\n"
+            kakao_text2 += f"{p['name']} {p['pct']:.1f}% (목표{p['target']}% {sign}{p['diff']}% / 허용±{band:.1f}%){diff_e}\n"
         kakao_text2 += f"총평가액: {port_total:,.0f}원\n"
         kakao_text2 += f"환율: {usdkrw:,.0f}원\n"
+        kakao_text2 += "━━━━━━━━━━━━━━━━━━━━━\n"
+        if is_check_month:
+            if breached:
+                kakao_text2 += f"⚠️ 정기 점검월 — 리밸런싱 실행 권장: {', '.join(breached)}\n"
+            else:
+                kakao_text2 += "✅ 정기 점검월 — 밴드 이내, 리밸런싱 불필요\n"
+        else:
+            next_month = min([m for m in REBAL_CHECK_MONTHS if m > datetime.now().month] or [REBAL_CHECK_MONTHS[0]])
+            if breached:
+                kakao_text2 += f"👀 모니터링 중(밴드 이탈: {', '.join(breached)}) — 실행은 {next_month}월 정기 점검 시\n"
+            else:
+                kakao_text2 += f"👀 모니터링 중 — 다음 정기 점검: {next_month}월\n"
     else:
         kakao_text2 += "포트폴리오 조회 실패\n"
     kakao_text2 += "━━━━━━━━━━━━━━━━━━━━━\n"
