@@ -451,12 +451,12 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
         # 보유 수량 (도미노.xlsx 기준 수동 입력)
         # SCHP, QQQ, PDBC: 2026-07 기준 미보유 (qty=0) — 매수 시 수량 갱신 필요
         holdings = {
-            "BRK-B":     {"qty": 42,  "type": "us", "name": "BRK.B"},
+            "BRK-B":     {"qty": 40,  "type": "us", "name": "BRK.B"},
             "GLD":       {"qty": 19,  "type": "us", "name": "GLD"},
             "SCHD":      {"qty": 10,  "type": "us", "name": "SCHD"},
-            "SCHP":      {"qty": 22,   "type": "us", "name": "SCHP"},
+            "SCHP":      {"qty": 39,   "type": "us", "name": "SCHP"},
             "QQQ":       {"qty": 0,   "type": "us", "name": "QQQ"},
-            "PDBC":      {"qty": 2,   "type": "us", "name": "PDBC"},
+            "PDBC":      {"qty": 3,   "type": "us", "name": "PDBC"},
             "VOO":       {"qty": 5,   "type": "us", "name": "VOO"},
             "360750.KS": {"qty": 252, "type": "kr", "name": "TIGER S&P500"},
             "458730.KS": {"qty": 466, "type": "kr", "name": "TIGER 배당다우존스"},
