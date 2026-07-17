@@ -448,19 +448,19 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
         if not usdkrw or usdkrw < 100:
             return None, None
 
-        # 보유 수량 (도미노.xlsx 기준 수동 입력)
+        # 보유 수량 (DOMINO 앱 2026-07-17 스크린샷 기준 갱신)
         # SCHP, QQQ, 468370: 2026-07 기준 미보유 (qty=0) — 매수 시 수량 갱신 필요
         # PDBC는 2026-07 제거됨(담보대출 불가 + SCHP로 대체) — holdings에서도 삭제
         holdings = {
-            "BRK-B":     {"qty": 56,  "type": "us", "name": "BRK.B"},
+            "BRK-B":     {"qty": 36,  "type": "us", "name": "BRK.B"},
             "GLD":       {"qty": 19,  "type": "us", "name": "GLD"},
-            "SCHD":      {"qty": 10,  "type": "us", "name": "SCHD"},
+            "SCHD":      {"qty": 19,  "type": "us", "name": "SCHD"},
             "SCHP":      {"qty": 0,   "type": "us", "name": "SCHP"},
             "QQQ":       {"qty": 0,   "type": "us", "name": "QQQ"},
-            "VOO":       {"qty": 1,   "type": "us", "name": "VOO"},
+            "VOO":       {"qty": 7,   "type": "us", "name": "VOO"},
             "360750.KS": {"qty": 252, "type": "kr", "name": "TIGER S&P500"},
             "458730.KS": {"qty": 466, "type": "kr", "name": "TIGER 배당다우존스"},
-            "102110.KS": {"qty": 56,  "type": "kr", "name": "TIGER 200"},
+            "102110.KS": {"qty": 61,  "type": "kr", "name": "TIGER 200"},
             "468370.KS": {"qty": 0,   "type": "kr", "name": "KODEX 미국인플레이션국채액티브"},
         }
 
