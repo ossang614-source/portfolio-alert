@@ -449,28 +449,29 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
             return None, None
 
         # 보유 수량 (도미노.xlsx 기준 수동 입력)
-        # SCHP, QQQ, PDBC: 2026-07 기준 미보유 (qty=0) — 매수 시 수량 갱신 필요
+        # SCHP, QQQ, 468370: 2026-07 기준 미보유 (qty=0) — 매수 시 수량 갱신 필요
+        # PDBC는 2026-07 제거됨(담보대출 불가 + SCHP로 대체) — holdings에서도 삭제
         holdings = {
-            "BRK-B":     {"qty": 40,  "type": "us", "name": "BRK.B"},
+            "BRK-B":     {"qty": 56,  "type": "us", "name": "BRK.B"},
             "GLD":       {"qty": 19,  "type": "us", "name": "GLD"},
             "SCHD":      {"qty": 10,  "type": "us", "name": "SCHD"},
-            "SCHP":      {"qty": 39,   "type": "us", "name": "SCHP"},
+            "SCHP":      {"qty": 0,   "type": "us", "name": "SCHP"},
             "QQQ":       {"qty": 0,   "type": "us", "name": "QQQ"},
-            "PDBC":      {"qty": 3,   "type": "us", "name": "PDBC"},
-            "VOO":       {"qty": 5,   "type": "us", "name": "VOO"},
+            "VOO":       {"qty": 1,   "type": "us", "name": "VOO"},
             "360750.KS": {"qty": 252, "type": "kr", "name": "TIGER S&P500"},
             "458730.KS": {"qty": 466, "type": "kr", "name": "TIGER 배당다우존스"},
-            "102110.KS": {"qty": 61,  "type": "kr", "name": "TIGER 200"},
+            "102110.KS": {"qty": 56,  "type": "kr", "name": "TIGER 200"},
+            "468370.KS": {"qty": 0,   "type": "kr", "name": "KODEX 미국인플레이션국채액티브"},
         }
 
-        # 단계별 목표 비중 (Portfolio System v3.0, SCHP 편입 반영)
+        # 단계별 목표 비중 (Portfolio System v3.0, PDBC 제거 → SCHP로 편입, 2026-07)
         # SCHD(미국)와 458730.KS(TIGER 배당다우존스, 국내 동일지수 ETF)는
         # 동일 자산군(SCHD 슬롯)으로 SCHD_GROUP 목표를 공유함 — 별도 슬롯 아님
         TARGETS_BY_PHASE = {
-            "V0":       {"BRK-B": 30, "360750.KS": 10, "SCHP": 20, "SCHD_GROUP": 10, "GLD": 15, "102110.KS": 10, "PDBC": 5},
-            "V0.5(H)":  {"BRK-B": 25, "360750.KS": 25, "SCHP": 10, "SCHD_GROUP": 10, "GLD": 15, "102110.KS": 10, "PDBC": 5},
-            "V0.5(C)":  {"BRK-B": 25, "360750.KS": 25, "SCHP": 10, "SCHD_GROUP": 10, "GLD": 15, "102110.KS": 10, "PDBC": 5},
-            "V1.0":     {"360750.KS": 50, "QQQ": 20, "GLD": 15, "102110.KS": 10, "PDBC": 5},
+            "V0":       {"BRK-B": 30, "360750.KS": 10, "SCHP": 25, "SCHD_GROUP": 10, "GLD": 15, "102110.KS": 10},
+            "V0.5(H)":  {"BRK-B": 25, "360750.KS": 25, "SCHP": 15, "SCHD_GROUP": 10, "GLD": 15, "102110.KS": 10},
+            "V0.5(C)":  {"BRK-B": 25, "360750.KS": 25, "SCHP": 15, "SCHD_GROUP": 10, "GLD": 15, "102110.KS": 10},
+            "V1.0":     {"360750.KS": 50, "QQQ": 20, "SCHP": 5, "GLD": 15, "102110.KS": 10},
             "ET":       {"BRK-B": 40, "SCHP": 35, "GLD": 15, "SCHD_GROUP": 10},
         }
         # 단계 미확정 시 잠정 V0.5(H) 기준 적용 (호출부에서 별도 경고 표시)
@@ -479,6 +480,8 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
         SCHD_GROUP_TARGET = targets.get("SCHD_GROUP", 0)
         SP500_GROUP_TICKERS = ("360750.KS", "VOO")
         SP500_GROUP_TARGET = targets.get("360750.KS", 0)
+        SCHP_GROUP_TICKERS = ("SCHP", "468370.KS")
+        SCHP_GROUP_TARGET = targets.get("SCHP", 0)
 
         total = 0
         values = {}
@@ -504,12 +507,16 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
         result = []
         schd_group_val = 0
         sp500_group_val = 0
+        schp_group_val = 0
         for ticker, data in values.items():
             if ticker in SCHD_GROUP_TICKERS:
                 schd_group_val += data["val"]
                 continue
             if ticker in SP500_GROUP_TICKERS:
                 sp500_group_val += data["val"]
+                continue
+            if ticker in SCHP_GROUP_TICKERS:
+                schp_group_val += data["val"]
                 continue
             name = data["info"].get("name", ticker)
             pct = round(data["val"] / total * 100, 1) if total > 0 else 0
@@ -537,6 +544,19 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
             "target": SP500_GROUP_TARGET,
             "diff": sp500_diff,
             "val": sp500_group_val
+        })
+
+        # SCHP + KODEX 미국인플레이션국채액티브(468370) 합산 1줄
+        # 468370은 SCHP가 아닌 TIP(iShares)를 담는 상품으로 확인되었으나,
+        # "동일 자산군(미국 TIPS)" 기준으로 합산 처리하기로 결정됨 (2026-07)
+        schp_pct = round(schp_group_val / total * 100, 1) if total > 0 else 0
+        schp_diff = round(schp_pct - SCHP_GROUP_TARGET, 1)
+        result.append({
+            "name": "SCHP+KODEX인플레국채",
+            "pct": schp_pct,
+            "target": SCHP_GROUP_TARGET,
+            "diff": schp_diff,
+            "val": schp_group_val
         })
 
         return result, total
