@@ -452,16 +452,16 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
         # SCHP, QQQ, 468370: 2026-07 기준 미보유 (qty=0) — 매수 시 수량 갱신 필요
         # PDBC는 2026-07 제거됨(담보대출 불가 + SCHP로 대체) — holdings에서도 삭제
         holdings = {
-            "BRK-B":     {"qty": 36,  "type": "us", "name": "BRK.B"},
+            "BRK-B":     {"qty": 33,  "type": "us", "name": "BRK.B"},
             "GLD":       {"qty": 19,  "type": "us", "name": "GLD"},
-            "SCHD":      {"qty": 19,  "type": "us", "name": "SCHD"},
+            "SCHD":      {"qty": 44,  "type": "us", "name": "SCHD"},
             "SCHP":      {"qty": 0,   "type": "us", "name": "SCHP"},
             "QQQ":       {"qty": 0,   "type": "us", "name": "QQQ"},
-            "VOO":       {"qty": 7,   "type": "us", "name": "VOO"},
-            "360750.KS": {"qty": 252, "type": "kr", "name": "TIGER S&P500"},
-            "458730.KS": {"qty": 466, "type": "kr", "name": "TIGER 배당다우존스"},
-            "102110.KS": {"qty": 61,  "type": "kr", "name": "TIGER 200"},
-            "468370.KS": {"qty": 0,   "type": "kr", "name": "KODEX 미국인플레이션국채액티브"},
+            "VOO":       {"qty": 9,   "type": "us", "name": "VOO"},
+            "360750.KS": {"qty": 0, "type": "kr", "name": "TIGER S&P500"},
+            "458730.KS": {"qty": 0, "type": "kr", "name": "TIGER 배당다우존스"},
+            "102110.KS": {"qty": 65,  "type": "kr", "name": "TIGER 200"},
+            "468370.KS": {"qty": 1218,   "type": "kr", "name": "KODEX 미국인플레이션국채액티브"},
         }
 
         # 단계별 목표 비중 (Portfolio System v3.0, PDBC 제거 → SCHP로 편입, 2026-07)
