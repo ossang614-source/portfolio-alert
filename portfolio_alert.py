@@ -452,12 +452,12 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
         # SCHP, QQQ, 468370: 2026-07 기준 미보유 (qty=0) — 매수 시 수량 갱신 필요
         # PDBC는 2026-07 제거됨(담보대출 불가 + SCHP로 대체) — holdings에서도 삭제
         holdings = {
-            "BRK-B":     {"qty": 30,  "type": "us", "name": "BRK.B"},
+            "BRK-B":     {"qty": 24,  "type": "us", "name": "BRK.B"},
             "GLD":       {"qty": 19,  "type": "us", "name": "GLD"},
-            "SCHD":      {"qty": 80,  "type": "us", "name": "SCHD"},
+            "SCHD":      {"qty": 100,  "type": "us", "name": "SCHD"},
             "SCHP":      {"qty": 0,   "type": "us", "name": "SCHP"},
             "QQQ":       {"qty": 0,   "type": "us", "name": "QQQ"},
-            "VOO":       {"qty": 11,   "type": "us", "name": "VOO"},
+            "VOO":       {"qty": 13,   "type": "us", "name": "VOO"},
             "360750.KS": {"qty": 150, "type": "kr", "name": "TIGER S&P500"},
             "458730.KS": {"qty": 0, "type": "kr", "name": "TIGER 배당다우존스"},
             "102110.KS": {"qty": 65,  "type": "kr", "name": "TIGER 200"},
