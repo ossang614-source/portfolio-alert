@@ -454,7 +454,7 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
         holdings = {
             "BRK-B":     {"qty": 24,  "type": "us", "name": "BRK.B"},
             "GLD":       {"qty": 19,  "type": "us", "name": "GLD"},
-            "SCHD":      {"qty": 100,  "type": "us", "name": "SCHD"},
+            "SCHD":      {"qty": 119,  "type": "us", "name": "SCHD"},
             "SCHP":      {"qty": 0,   "type": "us", "name": "SCHP"},
             "QQQ":       {"qty": 0,   "type": "us", "name": "QQQ"},
             "VOO":       {"qty": 13,   "type": "us", "name": "VOO"},
