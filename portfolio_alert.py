@@ -1,4 +1,4 @@
-import yfinance as yf
+﻿import yfinance as yf
 import requests
 import smtplib
 import json
@@ -217,9 +217,16 @@ def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts,
                 breached.append(p["name"])
             row_color = "#ef4444" if is_breach else "#22c55e"
             sign = "+" if p["diff"] >= 0 else ""
+            if "detail" in p:
+                sub_line = p["detail"] or "미보유"
+            elif "qty" in p:
+                unit_price = f"${p['price']:,.2f}" if p.get("currency") == "USD" else f"{p['price']:,.0f}원"
+                sub_line = f"{p['qty']}주 × {unit_price}"
+            else:
+                sub_line = ""
             portfolio_rows += f"""
             <tr style="background:{'#1a0000' if is_breach else '#001400'}22">
-              <td style="padding:8px 14px;color:#ccc;font-size:12px">{p['name']}</td>
+              <td style="padding:8px 14px;color:#ccc;font-size:12px">{p['name']}<br><span style="color:#555;font-size:10px">{sub_line}</span></td>
               <td style="padding:8px 14px;color:#fff;font-family:monospace;font-size:12px;text-align:right">{p['val']:,.0f}원</td>
               <td style="padding:8px 14px;color:#888;font-family:monospace;font-size:12px;text-align:right">{p['pct']:.1f}%</td>
               <td style="padding:8px 14px;color:#888;font-family:monospace;font-size:12px;text-align:right">목표{p['target']}%</td>
@@ -457,11 +464,11 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
             "SCHD":      {"qty": 139,  "type": "us", "name": "SCHD"},
             "SCHP":      {"qty": 0,   "type": "us", "name": "SCHP"},
             "QQQ":       {"qty": 0,   "type": "us", "name": "QQQ"},
-            "VOO":       {"qty": 13,   "type": "us", "name": "VOO"},
-            "360750.KS": {"qty": 150, "type": "kr", "name": "TIGER S&P500"},
+            "VOO":       {"qty": 15,   "type": "us", "name": "VOO"},
+            "360750.KS": {"qty": 0, "type": "kr", "name": "TIGER S&P500"},
             "458730.KS": {"qty": 0, "type": "kr", "name": "TIGER 배당다우존스"},
-            "102110.KS": {"qty": 65,  "type": "kr", "name": "TIGER 200"},
-            "468370.KS": {"qty": 864,   "type": "kr", "name": "KODEX 미국인플레이션국채액티브"},
+            "102110.KS": {"qty": 69,  "type": "kr", "name": "TIGER 200"},
+            "468370.KS": {"qty": 904,   "type": "kr", "name": "KODEX 미국인플레이션국채액티브"},
         }
 
         # 단계별 목표 비중 (Portfolio System v3.0, PDBC 제거 → SCHP로 편입, 2026-07)
@@ -522,7 +529,26 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
             pct = round(data["val"] / total * 100, 1) if total > 0 else 0
             target = targets.get(ticker, 0)
             diff = round(pct - target, 1)
-            result.append({"name": name, "pct": pct, "target": target, "diff": diff, "val": data["val"]})
+            result.append({
+                "name": name, "pct": pct, "target": target, "diff": diff, "val": data["val"],
+                "qty": data["info"]["qty"], "price": data["price"], "currency": "USD" if data["info"]["type"] == "us" else "KRW"
+            })
+
+        def build_group_detail(tickers):
+            parts = []
+            for tk in tickers:
+                d = values.get(tk)
+                if d is None:
+                    continue
+                q = d["info"]["qty"]
+                p = d["price"]
+                unit = "$" if d["info"]["type"] == "us" else "원"
+                nm = d["info"]["name"]
+                if d["info"]["type"] == "us":
+                    parts.append(f"{nm} {q}주×${p:,.2f}")
+                else:
+                    parts.append(f"{nm} {q}주×{p:,.0f}원")
+            return " + ".join(parts)
 
         # SCHD + TIGER 배당다우존스 합산 1줄 (target 있는 단계만 표시)
         schd_pct = round(schd_group_val / total * 100, 1) if total > 0 else 0
@@ -532,7 +558,8 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
             "pct": schd_pct,
             "target": SCHD_GROUP_TARGET,
             "diff": schd_diff,
-            "val": schd_group_val
+            "val": schd_group_val,
+            "detail": build_group_detail(SCHD_GROUP_TICKERS)
         })
 
         # TIGER S&P500 + VOO 합산 1줄 (동일 지수 국내·미국 대체 티커)
@@ -543,7 +570,8 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
             "pct": sp500_pct,
             "target": SP500_GROUP_TARGET,
             "diff": sp500_diff,
-            "val": sp500_group_val
+            "val": sp500_group_val,
+            "detail": build_group_detail(SP500_GROUP_TICKERS)
         })
 
         # SCHP + KODEX 미국인플레이션국채액티브(468370) 합산 1줄
@@ -556,7 +584,8 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
             "pct": schp_pct,
             "target": SCHP_GROUP_TARGET,
             "diff": schp_diff,
-            "val": schp_group_val
+            "val": schp_group_val,
+            "detail": build_group_detail(SCHP_GROUP_TICKERS)
         })
 
         return result, total
@@ -736,7 +765,16 @@ def main():
                 breached.append(p["name"])
             diff_e = "🔴" if is_breach else "🟢"
             sign = "+" if p["diff"] >= 0 else ""
+            if "detail" in p:
+                sub_line = p["detail"] or "미보유"
+            elif "qty" in p:
+                unit_price = f"${p['price']:,.2f}" if p.get("currency") == "USD" else f"{p['price']:,.0f}원"
+                sub_line = f"{p['qty']}주 × {unit_price}"
+            else:
+                sub_line = ""
             kakao_text2 += f"{p['name']} {p['val']:,.0f}원 ({p['pct']:.1f}%, 목표{p['target']}% {sign}{p['diff']}% / 허용±{band:.1f}%){diff_e}\n"
+            if sub_line:
+                kakao_text2 += f"  └ {sub_line}\n"
         kakao_text2 += f"총평가액: {port_total:,.0f}원\n"
         kakao_text2 += f"환율: {usdkrw:,.0f}원\n"
         kakao_text2 += "━━━━━━━━━━━━━━━━━━━━━\n"
