@@ -1,7 +1,6 @@
-
 name: Daily Portfolio Alert
 
-on:
+"on":
   schedule:
     - cron: '0 0 * * 1-5'  # 평일 오전 9시 (UTC+9)
   workflow_dispatch:
@@ -9,10 +8,19 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # phase_state.json 커밋을 위해 필요
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - run: pip install yfinance requests xlrd
       - run: python portfolio_alert.py
+      - name: Commit phase_state.json (경로의존 규칙용 단계 이력 저장)
+        run: |
+          git config user.name "portfolio-bot"
+          git config user.email "portfolio-bot@users.noreply.github.com"
+          git add phase_state.json
+          git diff --staged --quiet || git commit -m "chore: update phase_state.json [skip ci]"
+          git push
