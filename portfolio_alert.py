@@ -1,4 +1,4 @@
-﻿import yfinance as yf
+import yfinance as yf
 import requests
 import smtplib
 import json
@@ -81,8 +81,72 @@ def get_fg():
 CAPE_MANUAL = None  # 확인 후 수동 입력 (예: 41.6)
 # ============================================================
 
+# BRK.B 주당 장부가치(BVPS) 수동 입력 — 분기 실적 발표 시 갱신
+# 출처: berkshirehathaway.com 분기 보고서 (B주 기준 BVPS)
+# ============================================================
+BRKB_BVPS_MANUAL = None  # 확인 후 수동 입력 (예: 348.5)
+# ============================================================
+
+# BRK.B 다음 실적 발표 예정일 — 발표 후 위 BVPS 갱신 필요
+# 참고: berkshirehathaway.com/news 공식 공지 또는 investing.com 확인
+# ============================================================
+BRKB_NEXT_EARNINGS_DATE = "2026-08-03"  # YYYY-MM-DD, 확인 후 수정. 발표 후엔 다음 분기 예상일로 갱신
+# ============================================================
+
+def check_brkb_earnings():
+    """
+    실적 발표 예정일 도달 여부 확인. 발표일 당일부터 BVPS를 갱신할 때까지
+    (=BRKB_NEXT_EARNINGS_DATE가 다음 분기 날짜로 바뀔 때까지) 매일 알림.
+    실제 발표 여부는 야후 캘린더로 자동 확인하지 않음 — 공식 발표는 수동 확인이 원칙
+    (2026-08-01 대화에서 3rd party 실적일자 정보 불일치 확인된 바 있음).
+    """
+    try:
+        if not BRKB_NEXT_EARNINGS_DATE:
+            return None
+        target = datetime.strptime(BRKB_NEXT_EARNINGS_DATE, "%Y-%m-%d").date()
+        today = datetime.now().date()
+        if today >= target:
+            return f"📢 BRK.B 실적 발표 예정일({BRKB_NEXT_EARNINGS_DATE}) 도래 — berkshirehathaway.com에서 확인 후 BVPS·BRKB_NEXT_EARNINGS_DATE 갱신 필요"
+        return None
+    except Exception:
+        return None
+
 def get_cape():
     return CAPE_MANUAL
+
+def check_brkb_entry():
+    """
+    BRK.B P/B 기반 진입 신호 판별 (5단계 시스템과 병렬·독립 적용)
+    - 기준선(1.45/1.30/1.20)에서 분기 지연 오차(약 3.5%, BVPS 연 11~15% 성장률 기준)를
+      안전마진으로 미리 차감한 값 사용 — 지연된 BVPS로 계산해도 실제 신호를 놓치지 않도록 함
+    - P/B ≤ 1.40: 1차 진입 신호 (원기준 1.45의 자사주매입 실증선, 안전마진 반영)
+    - P/B ≤ 1.25: 강한 진입 신호 (원기준 1.30의 역사적 저평가, 안전마진 반영)
+    - P/B ≤ 1.15: 최강 신호 (원기준 1.20의 Buffett Put, 안전마진 반영)
+    BVPS는 분기별 수동 입력 필요. 미입력 시 판별 불가 반환.
+    """
+    try:
+        if BRKB_BVPS_MANUAL is None:
+            return None, None, "BVPS 미입력 — 분기보고서 확인 후 BRKB_BVPS_MANUAL 갱신 필요"
+        t = yf.Ticker("BRK-B")
+        hist = t.history(period="5d")
+        if hist is None or hist.empty:
+            return None, None, "BRK-B 가격 조회 실패"
+        hist = hist.dropna(subset=['Close'])
+        if hist.empty:
+            return None, None, "BRK-B 유효 가격 없음"
+        price = float(hist['Close'].iloc[-1])
+        pb = round(price / BRKB_BVPS_MANUAL, 2)
+        if pb <= 1.15:
+            signal = "🟢🟢🟢 최강 진입 신호 (Buffett Put, 안전마진 반영 ≤1.15)"
+        elif pb <= 1.25:
+            signal = "🟢🟢 강한 진입 신호 (역사적 저평가, 안전마진 반영 ≤1.25)"
+        elif pb <= 1.40:
+            signal = "🟢 1차 진입 신호 (자사주매입 실증선, 안전마진 반영 ≤1.40)"
+        else:
+            signal = "⚪ 신호 없음 (P/B > 1.40)"
+        return pb, signal, None
+    except Exception as e:
+        return None, None, f"P/B 계산 예외: {type(e).__name__}: {e}"
 
 def get_btc_balance():
     try:
@@ -182,7 +246,7 @@ def indicator_color(value, ok_min, ok_max):
         return "#22c55e"
     return "#ef4444"
 
-def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts, cape, portfolio=None, port_total=None, usdkrw=None, current_phase=None, data_errors=None, btc_balance=None, btc_usd=None, btc_total_krw=None):
+def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts, cape, portfolio=None, port_total=None, usdkrw=None, current_phase=None, data_errors=None, btc_balance=None, btc_usd=None, btc_total_krw=None, brkb_pb=None, brkb_signal=None, brkb_err=None, v025_alert=None, brkb_earnings_alert=None, last_phase=None, rule_note=None):
     fg_str = str(fg) if fg is not None else "수동확인"
 
     # 지표별 상태 색상
@@ -325,8 +389,22 @@ def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts,
       {alert_rows}
     </table>
 
+    <!-- BRK.B 진입신호 (단계와 독립) -->
+    <div style="font-size:10px;color:#555;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px">▸ BRK.B 진입신호 (P/B 기준 · 단계와 독립 판별)</div>
+    <div style="background:#0d0d0d;border-radius:6px;padding:12px 14px;margin-bottom:24px">
+      {f'<span style="color:#eab308;font-size:12px">⚠️ {brkb_err}</span>' if brkb_err else f'<span style="color:#fff;font-family:monospace;font-weight:700">P/B {brkb_pb}</span> <span style="color:#ccc;font-size:12px;margin-left:8px">{brkb_signal}</span>'}
+      <div style="color:#555;font-size:10px;margin-top:6px">기준(안전마진 반영): ≤1.40 자사주매입 실증선 · ≤1.25 역사적 저평가 · ≤1.15 Buffett Put</div>
+      <div style="color:#444;font-size:9px;margin-top:2px">원기준 1.45/1.30/1.20에서 분기 지연 오차 약 3.5%p 선반영</div>
+      {f'<div style="color:#facc15;font-size:11px;margin-top:8px;font-weight:700">{brkb_earnings_alert}</div>' if brkb_earnings_alert else ''}
+    </div>
+
+    {f'''<div style="background:#001400;border:1px solid #14532d;border-radius:6px;padding:12px 14px;margin-bottom:24px">
+      <span style="color:#22c55e;font-size:12px;font-weight:700">{v025_alert}</span>
+    </div>''' if v025_alert else ''}
+
     <!-- 포트폴리오 현황 -->
-    <div style="font-size:10px;color:#555;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px">▸ 포트폴리오 현황 ({current_phase or '확인 필요'} 기준)</div>
+    <div style="font-size:10px;color:#555;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px">▸ 포트폴리오 현황 ({current_phase or '확인 필요'} 기준){f' — 직전: {last_phase}' if last_phase else ''}</div>
+    {f'<div style="color:#38bdf8;font-size:11px;margin-bottom:10px">🔀 {rule_note}</div>' if rule_note else ''}
     <table style="width:100%;border-collapse:collapse;margin-bottom:8px">
       <tr style="background:#111">
         <td style="padding:8px 14px;color:#555;font-size:10px">종목</td>
@@ -459,16 +537,17 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
         # SCHP, QQQ, 468370: 2026-07 기준 미보유 (qty=0) — 매수 시 수량 갱신 필요
         # PDBC는 2026-07 제거됨(담보대출 불가 + SCHP로 대체) — holdings에서도 삭제
         holdings = {
-            "BRK-B":     {"qty": 24,  "type": "us", "name": "BRK.B"},
+            "BRK-B":     {"qty": 36,  "type": "us", "name": "BRK.B"},
             "GLD":       {"qty": 19,  "type": "us", "name": "GLD"},
-            "SCHD":      {"qty": 139,  "type": "us", "name": "SCHD"},
+            "SCHD":      {"qty": 19,  "type": "us", "name": "SCHD"},
             "SCHP":      {"qty": 0,   "type": "us", "name": "SCHP"},
             "QQQ":       {"qty": 0,   "type": "us", "name": "QQQ"},
-            "VOO":       {"qty": 15,   "type": "us", "name": "VOO"},
-            "360750.KS": {"qty": 0, "type": "kr", "name": "TIGER S&P500"},
-            "458730.KS": {"qty": 0, "type": "kr", "name": "TIGER 배당다우존스"},
-            "102110.KS": {"qty": 69,  "type": "kr", "name": "TIGER 200"},
-            "468370.KS": {"qty": 904,   "type": "kr", "name": "KODEX 미국인플레이션국채액티브"},
+            "VOO":       {"qty": 7,   "type": "us", "name": "VOO"},
+            "360750.KS": {"qty": 252, "type": "kr", "name": "TIGER S&P500"},
+            "458730.KS": {"qty": 466, "type": "kr", "name": "TIGER 배당다우존스"},
+            "102110.KS": {"qty": 61,  "type": "kr", "name": "TIGER 200"},
+            "468370.KS": {"qty": 0,   "type": "kr", "name": "KODEX 미국인플레이션국채액티브"},
+            "SHV":       {"qty": 0,   "type": "us", "name": "SHV"},
         }
 
         # 단계별 목표 비중 (Portfolio System v3.0, PDBC 제거 → SCHP로 편입, 2026-07)
@@ -476,10 +555,11 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
         # 동일 자산군(SCHD 슬롯)으로 SCHD_GROUP 목표를 공유함 — 별도 슬롯 아님
         TARGETS_BY_PHASE = {
             "V0":       {"BRK-B": 30, "360750.KS": 10, "SCHP": 25, "SCHD_GROUP": 10, "GLD": 15, "102110.KS": 10},
+            "V0.25":    {"BRK-B": 25, "SHV": 60, "GLD": 15},
             "V0.5(H)":  {"BRK-B": 25, "360750.KS": 25, "SCHP": 15, "SCHD_GROUP": 10, "GLD": 15, "102110.KS": 10},
             "V0.5(C)":  {"BRK-B": 25, "360750.KS": 25, "SCHP": 15, "SCHD_GROUP": 10, "GLD": 15, "102110.KS": 10},
             "V1.0":     {"360750.KS": 50, "QQQ": 20, "SCHP": 5, "GLD": 15, "102110.KS": 10},
-            "ET":       {"BRK-B": 40, "SCHP": 35, "GLD": 15, "SCHD_GROUP": 10},
+            "ET":       {"SHV": 85, "GLD": 15},
         }
         # 단계 미확정 시 잠정 V0.5(H) 기준 적용 (호출부에서 별도 경고 표시)
         targets = TARGETS_BY_PHASE.get(phase, TARGETS_BY_PHASE["V0.5(H)"])
@@ -594,10 +674,9 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
 
 def determine_phase(v0_cape, v0_others, h_count, vix, et_count, c_vix, c_rsi, fg):
     """
-    당일 지표 기준 단계 판별. 이력(직전 단계) 정보 없이 계산하므로
-    'ET→V0.5(C) 경유 필수', 'V0.5(H)→V1.0 직접전환 불가' 같은
-    경로 의존 규칙은 반영되지 않음 — 참고용 판별이며 최종 확인은 수동으로 할 것.
-    V1.0은 50주선 데이터 미수집으로 자동판별 대상에서 제외.
+    당일 지표 기준 1차(원시) 단계 판별. 이 결과는 이력을 모르는 상태의 '후보'이며,
+    실제 적용 전 apply_transition_rules()에서 경로의존 규칙(ET→V0.5(C) 경유 필수 등)이
+    적용된다. V1.0은 50주선 데이터 미수집으로 자동판별 대상에서 제외.
     """
     if vix >= 40:
         return "ET"
@@ -610,6 +689,39 @@ def determine_phase(v0_cape, v0_others, h_count, vix, et_count, c_vix, c_rsi, fg
     if c_vix and c_rsi and fg is not None and fg >= 40:
         return "V0.5(C)"
     return "확인 필요"
+
+PHASE_STATE_FILE = "phase_state.json"
+
+def load_phase_state():
+    """직전 실행의 확정 단계를 로컬 파일에서 로드. 파일 없으면(최초 실행) None."""
+    try:
+        with open(PHASE_STATE_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data.get("last_phase")
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+def save_phase_state(phase):
+    """확정된 현재 단계를 다음 실행이 읽을 수 있도록 저장."""
+    try:
+        with open(PHASE_STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump({"last_phase": phase, "updated": datetime.now().strftime("%Y-%m-%d %H:%M")}, f, ensure_ascii=False)
+    except Exception as e:
+        print(f"[경고] phase_state.json 저장 실패: {e}")
+
+def apply_transition_rules(raw_phase, last_phase):
+    """
+    경로의존 전환 규칙 적용.
+    - ET → V0.5(C) 경유 필수: 직전이 ET였다면, 오늘 지표가 V0.5(H) 조건을 충족해도
+      V0.5(C)로 강제 라우팅 (V0.5(H) 직행 금지)
+    - V0.5(H) → V1.0 직접전환 금지: V1.0은 수동 진입만 허용되므로, get_portfolio_status
+      호출 시 phase="V1.0"을 넘기기 전 직전 단계가 V0.5(C)였는지 별도 확인 필요
+      (이 함수는 자동판별 경로만 다루며, V1.0 수동 진입 시엔 main()에서 별도 경고)
+    반환: (적용된_단계, 규칙_적용_메모 또는 None)
+    """
+    if last_phase == "ET" and raw_phase == "V0.5(H)":
+        return "V0.5(C)", f"ET→V0.5(C) 경유 규칙 적용: 오늘 지표는 V0.5(H) 조건 충족이나 직전 단계가 ET였으므로 V0.5(C)로 라우팅"
+    return raw_phase, None
 
 def main():
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -636,6 +748,8 @@ def main():
         print(f"[경고] {ret5d_err}")
         ret5d = 0
     cape    = get_cape()
+    brkb_pb, brkb_signal, brkb_err = check_brkb_entry()
+    brkb_earnings_alert = check_brkb_earnings()
 
     alerts = check_phases(sma200_pct, rsi, qqq_pct, vix, fg, ret5d, cape)
 
@@ -659,7 +773,20 @@ def main():
     et_count = sum([et1, et2, et3])
     c_vix = vix <= 22
     c_rsi = rsi >= 38
-    current_phase = determine_phase(v0_cape, v0_others, h_count, vix, et_count, c_vix, c_rsi, fg)
+    raw_phase = determine_phase(v0_cape, v0_others, h_count, vix, et_count, c_vix, c_rsi, fg)
+    last_phase = load_phase_state()
+    current_phase, rule_note = apply_transition_rules(raw_phase, last_phase)
+    if rule_note:
+        print(f"[규칙적용] {rule_note}")
+
+    v025_alert = None
+    if current_phase == "ET" and brkb_signal and "신호 없음" not in brkb_signal:
+        v025_alert = f"🟢 V0.25 진입 검토 가능 — BRK.B {brkb_signal} (ET 유지 중, 수동 확인 후 전환)"
+
+    # "확인 필요"인 날은 직전 확정 단계를 덮어쓰지 않음 — 경로의존 규칙(last_phase)이
+    # 모호한 날 때문에 유실되지 않도록 방지
+    if current_phase != "확인 필요":
+        save_phase_state(current_phase)
 
     portfolio, port_total = get_portfolio_status(usdkrw, current_phase)
 
@@ -668,7 +795,7 @@ def main():
     else:
         subject = f"[Portfolio Alert] 일일 보고 — {now}"
 
-    html = build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts, cape, portfolio, port_total, usdkrw, current_phase, data_errors, btc_balance, btc_usd, btc_total_krw)
+    html = build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts, cape, portfolio, port_total, usdkrw, current_phase, data_errors, btc_balance, btc_usd, btc_total_krw, brkb_pb, brkb_signal, brkb_err, v025_alert, brkb_earnings_alert, last_phase, rule_note)
     send_email(subject, html)
 
     # 카카오톡 요약 발송
@@ -706,16 +833,30 @@ def main():
     kakao_text += f"5일    {'오류' if ret5d_err else f'{ret5d:+.1f}%'}   {ret_e}\n"
     kakao_text += "━━━━━━━━━━━━━━━━━━━━━\n"
     kakao_text += f"현재 단계: {current_phase}\n"
+    if last_phase:
+        kakao_text += f"(직전 확정 단계: {last_phase})\n"
+    if rule_note:
+        kakao_text += f"🔀 {rule_note}\n"
     if current_phase == "확인 필요":
         kakao_text += "⚠️ 단계 미확정 — 포트폴리오 목표치는 잠정 V0.5(H) 기준\n"
     if current_phase == "V1.0":
         kakao_text += "⚠️ V1.0은 자동판별 대상 아님(수동 확인 필요)\n"
+    if v025_alert:
+        kakao_text += f"{v025_alert}\n"
     if alerts:
         for a in alerts:
             title = a[0] if isinstance(a, tuple) else a
             kakao_text += f"⚠️ {title}\n"
     else:
         kakao_text += "✅ 전환 신호 없음\n"
+    kakao_text += "━━━━━━━━━━━━━━━━━━━━━\n"
+    kakao_text += "📈 BRK.B 진입신호 (단계와 독립 판별)\n"
+    if brkb_err:
+        kakao_text += f"⚠️ {brkb_err}\n"
+    else:
+        kakao_text += f"P/B {brkb_pb} — {brkb_signal}\n"
+    if brkb_earnings_alert:
+        kakao_text += f"{brkb_earnings_alert}\n"
     kakao_text += "━━━━━━━━━━━━━━━━━━━━━\n"
     v0_cape_s = "✅충족" if v0_cape else ("🔲미확인" if cape is None else "❌미충족")
     kakao_text += f"🔴 V0 발동 조건 (전부 충족 시)\n"
