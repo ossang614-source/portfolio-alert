@@ -117,12 +117,9 @@ def get_cape():
 
 def check_brkb_entry():
     """
-    BRK.B P/B 기반 진입 신호 판별 (5단계 시스템과 병렬·독립 적용)
-    - 기준선(1.45/1.30/1.20)에서 분기 지연 오차(약 3.5%, BVPS 연 11~15% 성장률 기준)를
-      안전마진으로 미리 차감한 값 사용 — 지연된 BVPS로 계산해도 실제 신호를 놓치지 않도록 함
-    - P/B ≤ 1.40: 1차 진입 신호 (원기준 1.45의 자사주매입 실증선, 안전마진 반영)
-    - P/B ≤ 1.25: 강한 진입 신호 (원기준 1.30의 역사적 저평가, 안전마진 반영)
-    - P/B ≤ 1.15: 최강 신호 (원기준 1.20의 Buffett Put, 안전마진 반영)
+    BRK.B P/B 기반 진입 신호 판별 (5단계 시스템과 병렬·독립 적용, ET 상태일 때만 의미 — V0.25(BRK))
+    단일 기준: P/B ≤ 1.30 (2026-08 단순화 — 기존 3단계(1.40/1.25/1.15) 중 중간값 채택)
+    분기 지연 오차(약 3.5%, BVPS 연 11~15% 성장률 기준) 감안한 안전마진 반영값.
     BVPS는 분기별 수동 입력 필요. 미입력 시 판별 불가 반환.
     """
     try:
@@ -137,14 +134,10 @@ def check_brkb_entry():
             return None, None, "BRK-B 유효 가격 없음"
         price = float(hist['Close'].iloc[-1])
         pb = round(price / BRKB_BVPS_MANUAL, 2)
-        if pb <= 1.15:
-            signal = "🟢🟢🟢 최강 진입 신호 (Buffett Put, 안전마진 반영 ≤1.15)"
-        elif pb <= 1.25:
-            signal = "🟢🟢 강한 진입 신호 (역사적 저평가, 안전마진 반영 ≤1.25)"
-        elif pb <= 1.40:
-            signal = "🟢 1차 진입 신호 (자사주매입 실증선, 안전마진 반영 ≤1.40)"
+        if pb <= 1.30:
+            signal = "🟢 진입 신호 (P/B ≤ 1.30, 안전마진 반영)"
         else:
-            signal = "⚪ 신호 없음 (P/B > 1.40)"
+            signal = "⚪ 신호 없음 (P/B > 1.30)"
         return pb, signal, None
     except Exception as e:
         return None, None, f"P/B 계산 예외: {type(e).__name__}: {e}"
@@ -197,7 +190,7 @@ def get_5day_return():
 # 배경: 2026년 6~7월 국내증시 대폭락(VKOSPI 사상최고 97.99) 당시,
 # 미국시장(SPY/VIX) 기준 ET가 전혀 감지되지 못했던 공백을 보완하기 위함.
 # 기존 5단계 전환·목표비중과는 별개의 "독립 경고 알림"으로만 작동 —
-# 포트폴리오 목표비중을 자동으로 바꾸지 않음(V0.25와 동일한 안전 원칙).
+# 포트폴리오 목표비중을 자동으로 바꾸지 않음(V0.25(BRK)와 동일한 안전 원칙).
 # ============================================================
 
 # VKOSPI(코스피200 변동성지수) 수동 입력 — 무료 API로 안정적 자동수집 불가 확인됨
@@ -280,25 +273,21 @@ def check_phases(sma200_pct, rsi, qqq_pct, vix, fg, ret5d, cape):
     v0_others = vix <= 18 and rsi >= 70 and (sma200_pct >= 15 or qqq_pct >= 20)
 
     if v0_cape and v0_others:
-        alerts.append(("🔴 V0 발동", "전 자산 V0 포트폴리오로 전환 검토", "#ef4444"))
+        alerts.append(("🔴 V0 조건 충족(경고)", "CAPE≥35·VIX≤18·RSI≥70·이격도 전부 충족 — 극단적 과열, 배분 자동전환은 없음(2026-08 V0 단계 폐지). 대응은 수동 판단", "#ef4444"))
     elif v0_others and cape is not None and not v0_cape:
         alerts.append(("⚠️ V0 CAPE 확인 필수", f"VIX·RSI·이격도 조건 충족 — CAPE 수동 확인 후 V0 전환 판단\nwww.multpl.com/shiller-pe (현재입력값: {cape})", "#eab308"))
     elif v0_others and cape is None:
         alerts.append(("⚠️ V0 CAPE 확인 필수", "VIX·RSI·이격도 조건 충족 — CAPE 미입력\nwww.multpl.com/shiller-pe 확인 후 CAPE_MANUAL 업데이트 필요", "#eab308"))
 
-    # V0.5(H)
-    h1 = 0 <= sma200_pct <= 10
-    h2 = fg is not None and 40 <= fg <= 60
-    h3 = 14 <= vix <= 22
-    h4 = 40 <= rsi <= 60
-    h_count = sum([h1, h2, h3, h4])
+    # V0.5(H) — 2026-08 개정: V1.0에서만 진입 가능한 단일 경로로 변경.
+    # 기존 4개조건(SMA200/F&G/VIX/RSI, 3개 이상) 폐지 → V1.0 카드의 복귀조건과 동일하게 통일
+    h1 = vix <= 18
+    h2 = rsi >= 73
+    h3 = sma200_pct >= 15
+    h_count = sum([h1, h2, h3])
 
-    # F&G 미상 상태에서 나머지 조건이 2개 충족 — F&G가 결정적
-    if fg is None and sum([h1, h3, h4]) == 2:
-        alerts.append(("⚠️ F&G 확인 필수 (V0.5H)", "나머지 조건 2개 충족 — F&G 40~60 확인 후 V0.5(H) 전환 판단\nedition.cnn.com/markets/fear-and-greed", "#f97316"))
-
-    if h_count >= 3:
-        alerts.append((f"🟠 V0.5(H) 충족", f"{h_count}/4개 조건 충족", "#f97316"))
+    if h_count >= 2:
+        alerts.append((f"🟠 V0.5(H) 지표 충족", f"{h_count}/3개 조건 충족 — 단, V1.0 상태에서만 실제 전환됨(다른 단계면 차단)", "#f97316"))
 
     # ET
     et1 = rsi <= 32
@@ -474,8 +463,8 @@ def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts,
     <div style="font-size:10px;color:#555;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px">▸ BRK.B 진입신호 (P/B 기준 · 단계와 독립 판별)</div>
     <div style="background:#0d0d0d;border-radius:6px;padding:12px 14px;margin-bottom:24px">
       {f'<span style="color:#eab308;font-size:12px">⚠️ {brkb_err}</span>' if brkb_err else f'<span style="color:#fff;font-family:monospace;font-weight:700">P/B {brkb_pb}</span> <span style="color:#ccc;font-size:12px;margin-left:8px">{brkb_signal}</span>'}
-      <div style="color:#555;font-size:10px;margin-top:6px">기준(안전마진 반영): ≤1.40 자사주매입 실증선 · ≤1.25 역사적 저평가 · ≤1.15 Buffett Put</div>
-      <div style="color:#444;font-size:9px;margin-top:2px">원기준 1.45/1.30/1.20에서 분기 지연 오차 약 3.5%p 선반영</div>
+      <div style="color:#555;font-size:10px;margin-top:6px">기준: P/B ≤ 1.30 (안전마진 반영, 원기준 1.35 상당)</div>
+      <div style="color:#444;font-size:9px;margin-top:2px">ET 상태일 때만 의미 있음 — V0.25(BRK) 진입 판단용</div>
       {f'<div style="color:#facc15;font-size:11px;margin-top:8px;font-weight:700">{brkb_earnings_alert}</div>' if brkb_earnings_alert else ''}
     </div>
 
@@ -642,10 +631,10 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
         # SCHD(미국)와 458730.KS(TIGER 배당다우존스, 국내 동일지수 ETF)는
         # 동일 자산군(SCHD 슬롯)으로 SCHD_GROUP 목표를 공유함 — 별도 슬롯 아님
         TARGETS_BY_PHASE = {
-            "V0":       {"BRK-B": 30, "360750.KS": 10, "SCHP": 25, "SCHD_GROUP": 10, "GLD": 15, "102110.KS": 10},
-            "V0.25":    {"BRK-B": 25, "SHV": 60, "GLD": 15},
-            "V0.5(H)":  {"BRK-B": 25, "360750.KS": 25, "SCHP": 15, "SCHD_GROUP": 10, "GLD": 15, "102110.KS": 10},
-            "V0.5(C)":  {"BRK-B": 25, "360750.KS": 25, "SCHP": 15, "SCHD_GROUP": 10, "GLD": 15, "102110.KS": 10},
+            # V0(원점 대기) 삭제됨(2026-08) — CAPE≥35 조건은 배분 전환 없이 경고 알림으로만 유지
+            "V0.25(BRK)": {"BRK-B": 25, "SHV": 60, "GLD": 15},
+            "V0.5(H)":  {"BRK-B": 20, "360750.KS": 20, "SCHP": 20, "SCHD_GROUP": 10, "GLD": 20, "102110.KS": 10},
+            "V0.5(C)":  {"BRK-B": 20, "360750.KS": 20, "SCHP": 20, "SCHD_GROUP": 10, "GLD": 20, "102110.KS": 10},
             "V1.0":     {"360750.KS": 50, "QQQ": 20, "SCHP": 5, "GLD": 15, "102110.KS": 10},
             "ET":       {"SHV": 85, "GLD": 15},
         }
@@ -763,16 +752,18 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
 def determine_phase(v0_cape, v0_others, h_count, vix, et_count, c_vix, c_rsi, fg):
     """
     당일 지표 기준 1차(원시) 단계 판별. 이 결과는 이력을 모르는 상태의 '후보'이며,
-    실제 적용 전 apply_transition_rules()에서 경로의존 규칙(ET→V0.5(C) 경유 필수 등)이
-    적용된다. V1.0은 50주선 데이터 미수집으로 자동판별 대상에서 제외.
+    실제 적용 전 apply_transition_rules()에서 경로의존 규칙(ET→V0.5(C) 경유 필수,
+    V0.5(H)는 V1.0에서만 진입 가능 등)이 적용된다.
+    V1.0은 50주선 데이터 미수집으로 자동판별 대상에서 제외.
+    V0(원점 대기)는 2026-08 폐지 — CAPE≥35 등 조건은 check_phases()의 경고 알림으로만 유지되며
+    더 이상 배분을 전환하지 않음. v0_cape/v0_others 인자는 하위호환을 위해 남겨두되 미사용.
+    h_count는 2026-08부터 3개 조건(VIX≤18/RSI≥73/SMA200+15%) 중 충족 개수 — 2개 이상이면 후보.
     """
     if vix >= 40:
         return "ET"
     if et_count >= 2:
         return "ET"
-    if v0_cape and v0_others:
-        return "V0"
-    if h_count >= 3:
+    if h_count >= 2:
         return "V0.5(H)"
     if c_vix and c_rsi and fg is not None and fg >= 40:
         return "V0.5(C)"
@@ -802,13 +793,15 @@ def apply_transition_rules(raw_phase, last_phase):
     경로의존 전환 규칙 적용.
     - ET → V0.5(C) 경유 필수: 직전이 ET였다면, 오늘 지표가 V0.5(H) 조건을 충족해도
       V0.5(C)로 강제 라우팅 (V0.5(H) 직행 금지)
-    - V0.5(H) → V1.0 직접전환 금지: V1.0은 수동 진입만 허용되므로, get_portfolio_status
-      호출 시 phase="V1.0"을 넘기기 전 직전 단계가 V0.5(C)였는지 별도 확인 필요
-      (이 함수는 자동판별 경로만 다루며, V1.0 수동 진입 시엔 main()에서 별도 경고)
+    - V0.5(H)는 V1.0에서만 진입 가능(2026-08 순환구조: ET→V0.5(C)→V1.0→V0.5(H)→ET):
+      직전 단계가 V1.0이 아니면, 오늘 지표가 V0.5(H) 조건(VIX≤18/RSI≥73/SMA200+15%, 2/3)을
+      충족해도 전환을 차단하고 "확인 필요"로 유지
     반환: (적용된_단계, 규칙_적용_메모 또는 None)
     """
     if last_phase == "ET" and raw_phase == "V0.5(H)":
         return "V0.5(C)", f"ET→V0.5(C) 경유 규칙 적용: 오늘 지표는 V0.5(H) 조건 충족이나 직전 단계가 ET였으므로 V0.5(C)로 라우팅"
+    if raw_phase == "V0.5(H)" and last_phase != "V1.0":
+        return "확인 필요", f"V0.5(H)는 V1.0에서만 진입 가능 — 오늘 지표는 조건 충족이나 직전 단계가 '{last_phase}'(V1.0 아님)이므로 전환 차단"
     return raw_phase, None
 
 def main():
@@ -852,11 +845,11 @@ def main():
     # 현재 단계 판단 (당일 지표 기준, 이력 미반영 — determine_phase() 주석 참고)
     v0_cape = cape is not None and cape >= 35
     v0_others = vix <= 18 and rsi >= 70 and (sma200_pct >= 15 or qqq_pct >= 20)
-    h1 = 0 <= sma200_pct <= 10
-    h2 = fg is not None and 40 <= fg <= 60
-    h3 = 14 <= vix <= 22
-    h4 = 40 <= rsi <= 60
-    h_count = sum([h1, h2, h3, h4])
+    # V0.5(H) — 2026-08 개정: V1.0 복귀 기준(VIX≤18/RSI≥73/SMA200+15%, 3개 중 2개)과 통일
+    h1 = vix <= 18
+    h2 = rsi >= 73
+    h3 = sma200_pct >= 15
+    h_count = sum([h1, h2, h3])
     et1 = rsi <= 32
     et2 = vix >= 32
     et3 = ret5d <= -6
@@ -871,7 +864,7 @@ def main():
 
     v025_alert = None
     if current_phase == "ET" and brkb_signal and "신호 없음" not in brkb_signal:
-        v025_alert = f"🟢 V0.25 진입 검토 가능 — BRK.B {brkb_signal} (ET 유지 중, 수동 확인 후 전환)"
+        v025_alert = f"🟢 V0.25(BRK) 진입 검토 가능 — BRK.B {brkb_signal} (ET 유지 중, 수동 확인 후 전환)"
 
     # "확인 필요"인 날은 직전 확정 단계를 덮어쓰지 않음 — 경로의존 규칙(last_phase)이
     # 모호한 날 때문에 유실되지 않도록 방지
