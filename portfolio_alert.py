@@ -499,13 +499,9 @@ def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts,
     <!-- 전환 기준 -->
     <div style="font-size:10px;color:#555;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px">▸ 단계별 전환 기준</div>
     <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
-      <tr style="background:#180808">
-        <td style="padding:8px 14px;width:130px"><span style="color:#ef4444;font-weight:700">🔴 V0</span></td>
-        <td style="padding:8px 14px;font-size:11px;color:#aaa">CAPE≥35 · VIX≤18 · RSI≥70 · SMA+15% OR QQQ+20% — 전부</td>
-      </tr>
       <tr style="background:#180e00">
-        <td style="padding:8px 14px"><span style="color:#f97316;font-weight:700">🟠 V0.5(H)</span></td>
-        <td style="padding:8px 14px;font-size:11px;color:#aaa">SMA 0~+10% · F&G 40~60 · VIX 14~22 · RSI 40~60 — 4개 중 3개</td>
+        <td style="padding:8px 14px;width:130px"><span style="color:#f97316;font-weight:700">🟠 V0.5(H)</span></td>
+        <td style="padding:8px 14px;font-size:11px;color:#aaa">VIX≤18 · RSI≥73 · SMA+15% — 3개 중 2개 (V1.0에서만 진입)</td>
       </tr>
       <tr style="background:#00121a">
         <td style="padding:8px 14px"><span style="color:#38bdf8;font-weight:700">🔵 V0.5(C)</span></td>
@@ -518,6 +514,18 @@ def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts,
       <tr style="background:#140000">
         <td style="padding:8px 14px"><span style="color:#dc2626;font-weight:700">🚨 ET</span></td>
         <td style="padding:8px 14px;font-size:11px;color:#aaa">RSI≤32 · VIX≥32 · 5일낙폭≥-6% — 2개 이상 / VIX≥40 즉시</td>
+      </tr>
+      <tr style="background:#001400">
+        <td style="padding:8px 14px"><span style="color:#22c55e;font-weight:700">🟢 V0.25(BRK)</span></td>
+        <td style="padding:8px 14px;font-size:11px;color:#aaa">ET 중 BRK.B P/B≤1.30 — 시장 지표와 무관, 수동 전환</td>
+      </tr>
+      <tr style="background:#0d0818">
+        <td style="padding:8px 14px"><span style="color:#a78bfa;font-weight:700">🇰🇷 코스피 ET</span></td>
+        <td style="padding:8px 14px;font-size:11px;color:#aaa">RSI≤32·VKOSPI≥32·5일낙폭≥-6% 2개 이상 — 경고만, 배분 변경 없음</td>
+      </tr>
+      <tr style="background:#180000">
+        <td style="padding:8px 14px"><span style="color:#eab308;font-weight:700">⚠️ V0(참고)</span></td>
+        <td style="padding:8px 14px;font-size:11px;color:#666">CAPE≥35 등 — 2026-08 배분전환 폐지, 경고만 유지</td>
       </tr>
     </table>
 
@@ -633,7 +641,7 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
         TARGETS_BY_PHASE = {
             # V0(원점 대기) 삭제됨(2026-08) — CAPE≥35 조건은 배분 전환 없이 경고 알림으로만 유지
             "V0.25(BRK)": {"BRK-B": 25, "SHV": 60, "GLD": 15},
-            "V0.5(H)":  {"BRK-B": 20, "360750.KS": 20, "SCHP": 20, "SCHD_GROUP": 10, "GLD": 20, "102110.KS": 10},
+            "V0.5(H)":  {"BRK-B": 25, "360750.KS": 20, "SCHP": 20, "SCHD_GROUP": 10, "GLD": 15, "102110.KS": 10},
             "V0.5(C)":  {"BRK-B": 25, "360750.KS": 20, "SCHP": 20, "SCHD_GROUP": 10, "GLD": 15, "102110.KS": 10},
             "V1.0":     {"360750.KS": 40, "QQQ": 20, "SCHP": 5, "GLD": 15, "102110.KS": 20},
             "ET":       {"SHV": 85, "GLD": 15},
@@ -954,19 +962,17 @@ def main():
         kakao_text += f"{kospi_recovery_status}\n"
     kakao_text += "━━━━━━━━━━━━━━━━━━━━━\n"
     v0_cape_s = "✅충족" if v0_cape else ("🔲미확인" if cape is None else "❌미충족")
-    kakao_text += f"🔴 V0 발동 조건 (전부 충족 시)\n"
+    kakao_text += f"⚠️ V0 조건 (참고 경고, 배분전환 없음 · 2026-08 폐지)\n"
     kakao_text += f"CAPE≥35: {v0_cape_s}\n"
     kakao_text += f"VIX≤18:  현재{vix} → {'✅충족' if vix <= 18 else '❌미충족'}\n"
     kakao_text += f"RSI≥70:  현재{rsi:.1f} → {'✅충족' if rsi >= 70 else '❌미충족'}\n"
     kakao_text += f"이격도:  S&P{sma200_pct:+.1f}%/QQQ{qqq_pct:+.1f}% → {'✅충족' if sma200_pct >= 15 or qqq_pct >= 20 else '❌미충족'}\n"
     kakao_text += "━━━━━━━━━━━━━━━━━━━━━\n"
-    kakao_text += f"🟠 V0.5(H) 조건 (4개 중 3개↑)\n"
-    kakao_text += f"SMA 0~+10%: 현재{sma200_pct:+.1f}% → {'✅충족' if 0 <= sma200_pct <= 10 else '❌미충족'}\n"
-    fg_s = "🔲미확인" if fg is None else (f"현재{fg} → " + ("✅충족" if 40 <= fg <= 60 else "❌미충족"))
-    kakao_text += f"F&G 40~60: {fg_s}\n"
-    kakao_text += f"VIX 14~22: 현재{vix} → {'✅충족' if 14 <= vix <= 22 else '❌미충족'}\n"
-    kakao_text += f"RSI 40~60: 현재{rsi:.1f} → {'✅충족' if 40 <= rsi <= 60 else '❌미충족'}\n"
-    kakao_text += f"→ {h_count}/4개 충족\n"
+    kakao_text += f"🟠 V0.5(H) 조건 (3개 중 2개↑, V1.0에서만 실제 진입)\n"
+    kakao_text += f"VIX≤18:  현재{vix} → {'✅충족' if vix <= 18 else '❌미충족'}\n"
+    kakao_text += f"RSI≥73:  현재{rsi:.1f} → {'✅충족' if rsi >= 73 else '❌미충족'}\n"
+    kakao_text += f"SMA+15%: 현재{sma200_pct:+.1f}% → {'✅충족' if sma200_pct >= 15 else '❌미충족'}\n"
+    kakao_text += f"→ {h_count}/3개 충족\n"
     kakao_text += "━━━━━━━━━━━━━━━━━━━━━\n"
     et1 = rsi <= 32
     et2 = vix >= 32
