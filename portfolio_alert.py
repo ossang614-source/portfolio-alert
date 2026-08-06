@@ -196,7 +196,7 @@ def get_5day_return():
 
 # VKOSPI(코스피200 변동성지수) 수동 입력 — 무료 API로 안정적 자동수집 불가 확인됨
 # 출처: 한국거래소(KRX) 또는 kr.investing.com/indices/kospi-volatility 매일 확인
-KOSPI_VKOSPI_MANUAL = None  # 확인 후 수동 입력 (예: 83.4)
+KOSPI_VKOSPI_MANUAL = 71.11  # 확인 후 수동 입력 (예: 83.4)
 
 def get_kospi_data():
     """코스피(^KS11) RSI(14)와 5거래일 누적수익률 자동 조회. VKOSPI는 미포함(수동 입력 별도)."""
