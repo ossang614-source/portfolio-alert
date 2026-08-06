@@ -186,86 +186,6 @@ def get_5day_return():
     except Exception as e:
         return None, f"SPY(5일) 조회 예외: {type(e).__name__}: {e}"
 
-# ============================================================
-# 코스피 자체 ET 독립 판별 (2026-08 신설)
-# 배경: 2026년 6~7월 국내증시 대폭락(VKOSPI 사상최고 97.99) 당시,
-# 미국시장(SPY/VIX) 기준 ET가 전혀 감지되지 못했던 공백을 보완하기 위함.
-# 기존 5단계 전환·목표비중과는 별개의 "독립 경고 알림"으로만 작동 —
-# 포트폴리오 목표비중을 자동으로 바꾸지 않음(V0.25(BRK)와 동일한 안전 원칙).
-# ============================================================
-
-# VKOSPI(코스피200 변동성지수) 수동 입력 — 무료 API로 안정적 자동수집 불가 확인됨
-# 출처: 한국거래소(KRX) 또는 kr.investing.com/indices/kospi-volatility 매일 확인
-KOSPI_VKOSPI_MANUAL = 71.11  # 확인 후 수동 입력 (예: 83.4)
-
-def get_kospi_data():
-    """코스피(^KS11) RSI(14)와 5거래일 누적수익률 자동 조회. VKOSPI는 미포함(수동 입력 별도)."""
-    try:
-        kospi = yf.Ticker("^KS11")
-        hist = kospi.history(period="3mo")
-        if hist is None or hist.empty:
-            return None, None, "^KS11 history() 응답이 비어있음"
-        hist = hist.dropna(subset=['Close'])
-        if len(hist) < 15:
-            return None, None, f"코스피 유효 데이터 {len(hist)}행 — 15일 미만"
-        delta = hist['Close'].diff()
-        gain  = delta.clip(lower=0).rolling(14).mean()
-        loss  = (-delta.clip(upper=0)).rolling(14).mean()
-        rs    = gain / loss
-        rsi   = (100 - (100 / (1 + rs))).iloc[-1]
-        ret5d = ((hist['Close'].iloc[-1] - hist['Close'].iloc[-6]) / hist['Close'].iloc[-6]) * 100 if len(hist) >= 6 else None
-        if rsi != rsi:
-            return None, None, "코스피 RSI 계산 결과 NaN"
-        rsi_val = round(float(rsi), 2)
-        ret5d_val = round(float(ret5d), 2) if ret5d is not None and ret5d == ret5d else None
-        return rsi_val, ret5d_val, None
-    except Exception as e:
-        return None, None, f"코스피 조회 예외: {type(e).__name__}: {e}"
-
-def check_kospi_et():
-    """
-    코스피 자체 ET 조건(독립 경고용): RSI≤32, VKOSPI≥32, 5일누적낙폭≥-6% 중 2개 이상,
-    또는 VKOSPI≥40 단독 즉시. F&G는 국내 비공식 3rd party 데이터라 신뢰도 문제로 제외.
-    반환: (경고문구 또는 None, 오류문구 또는 None)
-    """
-    rsi_kospi, ret5d_kospi, err = get_kospi_data()
-    if err:
-        return None, f"코스피 지표 조회 실패: {err}"
-    if KOSPI_VKOSPI_MANUAL is None:
-        return None, "VKOSPI 미입력 — kr.investing.com/indices/kospi-volatility 확인 후 KOSPI_VKOSPI_MANUAL 갱신 필요"
-
-    cond_rsi = rsi_kospi is not None and rsi_kospi <= 32
-    cond_vix = KOSPI_VKOSPI_MANUAL >= 32
-    cond_ret = ret5d_kospi is not None and ret5d_kospi <= -6
-    count = sum([cond_rsi, cond_vix, cond_ret])
-
-    if KOSPI_VKOSPI_MANUAL >= 40:
-        return f"🚨 코스피 자체 ET 조건 충족(VKOSPI {KOSPI_VKOSPI_MANUAL} 단독 ≥40) — 국내 방어 검토 필요 [RSI {rsi_kospi}, 5일 {ret5d_kospi}%]", None
-    if count >= 2:
-        return f"🚨 코스피 자체 ET 조건 충족(2개 이상) — RSI {rsi_kospi}(≤32:{cond_rsi}) VKOSPI {KOSPI_VKOSPI_MANUAL}(≥32:{cond_vix}) 5일 {ret5d_kospi}%(≤-6%:{cond_ret})", None
-    return None, None
-
-def check_kospi_recovery():
-    """
-    코스피 자체 ET→V0.5(C) 복귀 조건(독립 경고용): VKOSPI≤22 AND RSI≥38 — 2개 전부 충족.
-    미국 시장 기준(F&G≥40, VIX≤22, RSI≥38)에서 신뢰도 낮은 F&G만 제외한 버전.
-    반환: (복귀조건 충족 여부 True/False/None(판별불가), 상태문구, 오류문구)
-    """
-    rsi_kospi, ret5d_kospi, err = get_kospi_data()
-    if err:
-        return None, None, f"코스피 지표 조회 실패: {err}"
-    if KOSPI_VKOSPI_MANUAL is None:
-        return None, None, "VKOSPI 미입력 — kr.investing.com/indices/kospi-volatility 확인 후 KOSPI_VKOSPI_MANUAL 갱신 필요"
-
-    cond_vix = KOSPI_VKOSPI_MANUAL <= 22
-    cond_rsi = rsi_kospi is not None and rsi_kospi >= 38
-    both = cond_vix and cond_rsi
-
-    status = f"VKOSPI {KOSPI_VKOSPI_MANUAL}(≤22:{cond_vix}) · RSI {rsi_kospi}(≥38:{cond_rsi})"
-    if both:
-        return True, f"🟢 코스피 복귀 조건 충족 — {status}", None
-    return False, f"⏳ 코스피 복귀 조건 미충족 — {status}", None
-
 def check_phases(sma200_pct, rsi, qqq_pct, vix, fg, ret5d, cape):
     alerts = []
 
@@ -317,7 +237,7 @@ def indicator_color(value, ok_min, ok_max):
         return "#22c55e"
     return "#ef4444"
 
-def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts, cape, portfolio=None, port_total=None, usdkrw=None, current_phase=None, data_errors=None, btc_balance=None, btc_usd=None, btc_total_krw=None, brkb_pb=None, brkb_signal=None, brkb_err=None, v025_alert=None, brkb_earnings_alert=None, last_phase=None, rule_note=None, kospi_et_alert=None, kospi_et_err=None, kospi_recovery_status=None, kospi_recovery_err=None):
+def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts, cape, portfolio=None, port_total=None, usdkrw=None, current_phase=None, data_errors=None, btc_balance=None, btc_usd=None, btc_total_krw=None, brkb_pb=None, brkb_signal=None, brkb_err=None, v025_alert=None, brkb_earnings_alert=None, last_phase=None, rule_note=None):
     fg_str = str(fg) if fg is not None else "수동확인"
 
     # 지표별 상태 색상
@@ -473,13 +393,6 @@ def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts,
       <span style="color:#22c55e;font-size:12px;font-weight:700">{v025_alert}</span>
     </div>''' if v025_alert else ''}
 
-    <!-- 코스피 자체 ET 독립 판별 -->
-    <div style="font-size:10px;color:#555;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px">▸ 🇰🇷 코스피 자체 ET 판별 (단계와 독립)</div>
-    <div style="background:#0d0d0d;border-radius:6px;padding:12px 14px;margin-bottom:24px">
-      {f'<span style="color:#eab308;font-size:12px">⚠️ {kospi_et_err}</span>' if kospi_et_err else (f'<span style="color:#ef4444;font-size:12px;font-weight:700">{kospi_et_alert}</span>' if kospi_et_alert else '<span style="color:#22c55e;font-size:12px">✅ 코스피 ET 조건 미충족</span>')}
-      {f'<div style="color:#eab308;font-size:11px;margin-top:6px">⚠️ 복귀조건: {kospi_recovery_err}</div>' if kospi_recovery_err else (f'<div style="color:#aaa;font-size:11px;margin-top:6px">{kospi_recovery_status}</div>' if kospi_recovery_status else '')}
-    </div>
-
     <!-- 포트폴리오 현황 -->
     <div style="font-size:10px;color:#555;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px">▸ 포트폴리오 현황 ({current_phase or '확인 필요'} 기준){f' — 직전: {last_phase}' if last_phase else ''}</div>
     {f'<div style="color:#38bdf8;font-size:11px;margin-bottom:10px">🔀 {rule_note}</div>' if rule_note else ''}
@@ -519,10 +432,6 @@ def build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts,
       <tr style="background:#001400">
         <td style="padding:8px 14px"><span style="color:#22c55e;font-weight:700">🟢 V0.25(BRK)</span></td>
         <td style="padding:8px 14px;font-size:11px;color:#aaa">ET 중 BRK.B P/B≤1.30 — 시장 지표와 무관, 수동 전환</td>
-      </tr>
-      <tr style="background:#0d0818">
-        <td style="padding:8px 14px"><span style="color:#a78bfa;font-weight:700">🇰🇷 코스피 ET</span></td>
-        <td style="padding:8px 14px;font-size:11px;color:#aaa">RSI≤32·VKOSPI≥32·5일낙폭≥-6% 2개 이상 — 경고만, 배분 변경 없음</td>
       </tr>
       <tr style="background:#180000">
         <td style="padding:8px 14px"><span style="color:#eab308;font-weight:700">⚠️ V0(참고)</span></td>
@@ -840,8 +749,6 @@ def main():
     cape    = get_cape()
     brkb_pb, brkb_signal, brkb_err = check_brkb_entry()
     brkb_earnings_alert = check_brkb_earnings()
-    kospi_et_alert, kospi_et_err = check_kospi_et()
-    kospi_recovery_ok, kospi_recovery_status, kospi_recovery_err = check_kospi_recovery()
 
     alerts = check_phases(sma200_pct, rsi, qqq_pct, vix, fg, ret5d, cape)
 
@@ -887,7 +794,7 @@ def main():
     else:
         subject = f"[Portfolio Alert] 일일 보고 — {now}"
 
-    html = build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts, cape, portfolio, port_total, usdkrw, current_phase, data_errors, btc_balance, btc_usd, btc_total_krw, brkb_pb, brkb_signal, brkb_err, v025_alert, brkb_earnings_alert, last_phase, rule_note, kospi_et_alert, kospi_et_err, kospi_recovery_status, kospi_recovery_err)
+    html = build_html(now, spy_price, sma200_pct, rsi, qqq_pct, vix, fg, ret5d, alerts, cape, portfolio, port_total, usdkrw, current_phase, data_errors, btc_balance, btc_usd, btc_total_krw, brkb_pb, brkb_signal, brkb_err, v025_alert, brkb_earnings_alert, last_phase, rule_note)
     send_email(subject, html)
 
     # 카카오톡 요약 발송
@@ -949,18 +856,6 @@ def main():
         kakao_text += f"P/B {brkb_pb} — {brkb_signal}\n"
     if brkb_earnings_alert:
         kakao_text += f"{brkb_earnings_alert}\n"
-    kakao_text += "━━━━━━━━━━━━━━━━━━━━━\n"
-    kakao_text += "🇰🇷 코스피 자체 ET 판별 (단계와 독립)\n"
-    if kospi_et_err:
-        kakao_text += f"⚠️ {kospi_et_err}\n"
-    elif kospi_et_alert:
-        kakao_text += f"{kospi_et_alert}\n"
-    else:
-        kakao_text += "✅ 코스피 ET 조건 미충족\n"
-    if kospi_recovery_err:
-        kakao_text += f"⚠️ 복귀조건: {kospi_recovery_err}\n"
-    elif kospi_recovery_status:
-        kakao_text += f"{kospi_recovery_status}\n"
     kakao_text += "━━━━━━━━━━━━━━━━━━━━━\n"
     v0_cape_s = "✅충족" if v0_cape else ("🔲미확인" if cape is None else "❌미충족")
     kakao_text += f"⚠️ V0 조건 (참고 경고, 배분전환 없음 · 2026-08 폐지)\n"
