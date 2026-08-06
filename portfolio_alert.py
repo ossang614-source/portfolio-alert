@@ -13,6 +13,7 @@ EMAIL_FROM   = "ossang614@gmail.com"
 EMAIL_TO     = "ossang614@gmail.com"
 EMAIL_PASS   = "fuvw zbun ydje supp"
 KAKAO_TOKEN  = "Rqmw5FYhctsUFOPNanK-wrCr3on3irAcAAAAAQoXIS0AAAGfMKLn4oE8pQXSEbh1"
+KAKAO_ENABLED = False  # 2026-08: 카카오톡 발송 중단, 이메일로만 발송
 CNN_FG_URL   = "https://edition.cnn.com/markets/fear-and-greed"
 CAPE_URL     = "https://www.multpl.com/shiller-pe"
 FRED_API_KEY = "9f331b77e1bbec6e77f04a5afcbc4e75"
@@ -631,7 +632,7 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
             "360750.KS": {"qty": 0, "type": "kr", "name": "TIGER S&P500"},
             "458730.KS": {"qty": 0, "type": "kr", "name": "TIGER 배당다우존스"},
             "102110.KS": {"qty": 69,  "type": "kr", "name": "TIGER 200"},
-            "468370.KS": {"qty": 904,   "type": "kr", "name": "KODEX 미국인플레이션국채액티브"},
+            "468370.KS": {"qty": 917,   "type": "kr", "name": "KODEX 미국인플레이션국채액티브"},
             "SHV":       {"qty": 0,   "type": "us", "name": "SHV"},
         }
 
@@ -1047,15 +1048,18 @@ def main():
     else:
         kakao_text2 += "잔고 조회 실패\n"
 
-    if send_kakao(kakao_text, link_url=CNN_FG_URL):
-        print("✅ 카카오톡 1번 발송 완료")
-    else:
-        print("⚠️ 카카오톡 1번 발송 실패")
+    if KAKAO_ENABLED:
+        if send_kakao(kakao_text, link_url=CNN_FG_URL):
+            print("✅ 카카오톡 1번 발송 완료")
+        else:
+            print("⚠️ 카카오톡 1번 발송 실패")
 
-    if send_kakao(kakao_text2, link_url=CAPE_URL):
-        print("✅ 카카오톡 2번 발송 완료")
+        if send_kakao(kakao_text2, link_url=CAPE_URL):
+            print("✅ 카카오톡 2번 발송 완료")
+        else:
+            print("⚠️ 카카오톡 2번 발송 실패")
     else:
-        print("⚠️ 카카오톡 2번 발송 실패")
+        print("ℹ️ 카카오톡 발송 비활성화(KAKAO_ENABLED=False) — 이메일만 발송")
 
     print("✅ 이메일 발송 완료")
 
