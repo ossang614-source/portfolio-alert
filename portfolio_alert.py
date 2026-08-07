@@ -542,6 +542,7 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
             "458730.KS": {"qty": 0, "type": "kr", "name": "TIGER 배당다우존스"},
             "102110.KS": {"qty": 69,  "type": "kr", "name": "TIGER 200"},
             "468370.KS": {"qty": 917,   "type": "kr", "name": "KODEX 미국인플레이션국채액티브"},
+            "329750.KS": {"qty": 68,    "type": "kr", "name": "TIGER 미국달러단기채권액티브"},
             "SHV":       {"qty": 0,   "type": "us", "name": "SHV"},
         }
 
@@ -562,7 +563,9 @@ def get_portfolio_status(usdkrw, phase="V0.5(H)"):
         SCHD_GROUP_TARGET = targets.get("SCHD_GROUP", 0)
         SP500_GROUP_TICKERS = ("360750.KS", "VOO")
         SP500_GROUP_TARGET = targets.get("360750.KS", 0)
-        SCHP_GROUP_TICKERS = ("SCHP", "468370.KS")
+        # 329750.KS(TIGER 미국달러단기채권액티브)는 기초지수가 KIS U.S. TREASURY BOND 0-1Y로
+        # 단기 명목채권(SHV 성격)이나, 사용자 확인 하에 SCHP그룹으로 편입(2026-08)
+        SCHP_GROUP_TICKERS = ("SCHP", "468370.KS", "329750.KS")
         SCHP_GROUP_TARGET = targets.get("SCHP", 0)
 
         total = 0
