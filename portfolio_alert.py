@@ -33,7 +33,7 @@ TARGETS = {
     "방어": {"QQQ": 10, "360750.KS": 10, "102110.KS": 10, "GLD": 15, "SCHP": 55},
 }
 
-# 슬롯 표시명 (이메일 표시용)
+# 슬롯 표시명 및 자산군 분류 (이메일 표시용)
 SLOT_NAMES = {
     "QQQ":       "QQQ (나스닥100)",
     "360750.KS": "TIGER 미국S&P500",
@@ -41,6 +41,17 @@ SLOT_NAMES = {
     "GLD":       "GLD (금)",
     "SCHP":      "물가연동채 그룹",
 }
+# 자산군: (분류명, 색상) — 성격이 같은 자산끼리 묶어 위험 구조를 한눈에 보이게 함
+SLOT_CLASS = {
+    "QQQ":       ("주식 · 미국 성장주", "#818cf8"),
+    "360750.KS": ("주식 · 미국 대형주", "#22c55e"),
+    "102110.KS": ("주식 · 국내",        "#a78bfa"),
+    "GLD":       ("실물자산 · 금",      "#eab308"),
+    "SCHP":      ("안전자산 · 채권",    "#f472b6"),
+}
+# 위험/안전 구분 (요약 표시용)
+RISK_SLOTS = ("QQQ", "360750.KS", "102110.KS")
+SAFE_SLOTS = ("GLD", "SCHP")
 
 # 전환 규칙
 DEFENSE_TRIGGER = 0.97   # 공격→방어: S&P500 < 200일선 × 0.97
@@ -148,16 +159,27 @@ def get_prices(tickers):
 
 
 def get_portfolio(phase, usdkrw, prices):
-    """현재 평가액과 목표 대비 이탈을 계산."""
+    """
+    현재 평가액과 목표 대비 이탈을 계산.
+    환율 조회 실패 시 달러 자산을 원화로 오계산하면 비중이 크게 왜곡되므로,
+    이 경우 계산을 포기하고 (None, 0, 0, 경고) 반환한다.
+    """
+    if usdkrw is None:
+        return None, 0, 0, "환율(USDKRW) 조회 실패 — 비중 계산 생략"
     targets = TARGETS[phase]
     values = {}
+    missing = []
     for tk, info in HOLDINGS.items():
         p = prices.get(tk)
-        if p is None or info["qty"] == 0:
+        if info["qty"] == 0:
             values[tk] = 0.0
             continue
+        if p is None:
+            values[tk] = 0.0
+            missing.append(info["name"])
+            continue
         v = p * info["qty"]
-        values[tk] = v * usdkrw if info["type"] == "us" and usdkrw else v
+        values[tk] = v * usdkrw if info["type"] == "us" else v
     # SCHP 슬롯은 그룹 합산
     slot_values = {}
     for slot in targets:
@@ -168,7 +190,7 @@ def get_portfolio(phase, usdkrw, prices):
     excluded = sum(values.get(t, 0.0) for t in ("BRK-B", "SCHD", "VOO"))
     total = sum(slot_values.values()) + excluded
     if total <= 0:
-        return None, 0, excluded
+        return None, 0, excluded, "보유 자산 평가액 0 — 가격 조회 실패 추정"
     rows = []
     for slot, tgt in targets.items():
         cur_pct = slot_values[slot] / total * 100
@@ -179,7 +201,8 @@ def get_portfolio(phase, usdkrw, prices):
             "over": abs(cur_pct - tgt) > band,
             "value": round(slot_values[slot]),
         })
-    return rows, round(total), round(excluded)
+    warn = f"시세 조회 실패: {', '.join(missing)}" if missing else None
+    return rows, round(total), round(excluded), warn
 
 
 def get_btc():
@@ -196,9 +219,16 @@ def get_btc():
 def build_html(now, close, ma200, dev, phase, changed, reason, rows, total, excluded,
                btc_bal, btc_usd, usdkrw, err):
     color = "#22c55e" if phase == "공격" else "#38bdf8"
+    tgt = TARGETS[phase]
+    risk_t = sum(v for k, v in tgt.items() if k in RISK_SLOTS)
+    safe_t = sum(v for k, v in tgt.items() if k in SAFE_SLOTS)
+    risk_c = sum(r["cur"] for r in (rows or []) if r["slot"] in RISK_SLOTS)
+    safe_c = sum(r["cur"] for r in (rows or []) if r["slot"] in SAFE_SLOTS)
     rebal = "".join(
         f"""<tr style="border-bottom:1px solid #1a1a1a">
-          <td style="padding:8px 14px;color:#ddd">{SLOT_NAMES.get(r['slot'], r['slot'])}</td>
+          <td style="padding:8px 14px;color:#ddd">{SLOT_NAMES.get(r['slot'], r['slot'])}
+            <div style="color:{SLOT_CLASS.get(r['slot'],('','#666'))[1]};font-size:10px;margin-top:2px">{SLOT_CLASS.get(r['slot'],('',''))[0]}</div>
+          </td>
           <td style="padding:8px 14px;color:#888;text-align:right">{r['target']}%</td>
           <td style="padding:8px 14px;color:#fff;text-align:right;font-family:monospace">{r['cur']}%</td>
           <td style="padding:8px 14px;text-align:right;font-family:monospace;color:{'#ef4444' if r['over'] else '#666'}">{r['diff']:+.1f}%p</td>
@@ -224,6 +254,18 @@ def build_html(now, close, ma200, dev, phase, changed, reason, rows, total, excl
       <tr><td style="padding:8px 14px;color:#888">200일선</td><td style="padding:8px 14px;text-align:right;color:#fff;font-family:monospace">{ma200:,.2f}</td></tr>
       <tr><td style="padding:8px 14px;color:#888">이격도</td><td style="padding:8px 14px;text-align:right;font-family:monospace;color:{'#22c55e' if dev>0 else '#ef4444'}">{dev:+.2f}%</td></tr>
       <tr><td style="padding:8px 14px;color:#888">방어 전환선 (-3%)</td><td style="padding:8px 14px;text-align:right;color:#888;font-family:monospace">{ma200*DEFENSE_TRIGGER:,.2f}</td></tr>
+    </table>
+
+    <div style="font-size:10px;color:#555;letter-spacing:0.1em;margin-bottom:10px">▸ 자산군 구성</div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;background:#0d0d0d;border-radius:6px">
+      <tr>
+        <td style="padding:12px 14px;color:#888">위험자산 <span style="color:#555;font-size:11px">(주식)</span></td>
+        <td style="padding:12px 14px;text-align:right;font-family:monospace;color:#fff">{risk_c:.1f}% <span style="color:#555">/ 목표 {risk_t}%</span></td>
+      </tr>
+      <tr>
+        <td style="padding:12px 14px;color:#888">안전자산 <span style="color:#555;font-size:11px">(채권·금)</span></td>
+        <td style="padding:12px 14px;text-align:right;font-family:monospace;color:#fff">{safe_c:.1f}% <span style="color:#555">/ 목표 {safe_t}%</span></td>
+      </tr>
     </table>
 
     <div style="font-size:10px;color:#555;letter-spacing:0.1em;margin-bottom:10px">▸ 목표 비중 대비 현황 ({phase})</div>
@@ -282,12 +324,12 @@ def main():
     save_state(phase, since)
 
     prices, usdkrw = get_prices(list(HOLDINGS.keys()))
-    rows, total, excluded = get_portfolio(phase, usdkrw, prices)
+    rows, total, excluded, port_warn = get_portfolio(phase, usdkrw, prices)
     btc_bal, btc_usd = get_btc()
 
     subject = f"[Portfolio v4.0] {'🔀 ' + prev_phase + '→' + phase if changed else phase} — {now}"
     html = build_html(now, close, ma200, dev, phase, changed, reason,
-                      rows, total, excluded, btc_bal, btc_usd, usdkrw, None)
+                      rows, total, excluded, btc_bal, btc_usd, usdkrw, port_warn)
     send_email(subject, html)
     print(f"✅ 이메일 발송 완료 (단계: {phase}, 이격도 {dev:+.2f}%)")
 
