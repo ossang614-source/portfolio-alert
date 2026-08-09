@@ -33,8 +33,8 @@ EMAIL_PASS = "fuvw zbun ydje supp"
 #   전환 신호(200일선)는 세 계좌 모두 동일하게 적용
 # ============================================================
 TARGETS = {
-    "공격": {"133690.KS": 25, "360750.KS": 20, "102110.KS": 15, "0072R0.KS": 15, "SCHP": 25},
-    "방어": {"133690.KS": 10, "360750.KS": 10, "102110.KS": 10, "0072R0.KS": 15, "SCHP": 55},
+    "공격": {"133690.KS": 25, "BRK-B": 20, "102110.KS": 15, "0072R0.KS": 15, "SCHP": 25},
+    "방어": {"133690.KS": 10, "BRK-B": 10, "102110.KS": 10, "0072R0.KS": 15, "SCHP": 55},
 }
 
 # 연금저축·IRP는 계좌 제약이 서로 달라 배분을 분리:
@@ -89,7 +89,8 @@ PENSION_ANNUAL_CONTRIB = {
 # 슬롯 표시명 및 자산군 분류 (이메일 표시용)
 SLOT_NAMES = {
     "133690.KS": "TIGER 미국나스닥100",
-    "360750.KS": "TIGER 미국S&P500",
+    "360750.KS": "TIGER 미국S&P500",  # 메인계좌 목표에서 제외됨(BRK-B로 교체), 연금계좌 참고용 유지
+    "BRK-B":     "버크셔 해서웨이 B주 (해외주식계좌)",
     "102110.KS": "TIGER 200 (코스피)",
     "0072R0.KS": "TIGER KRX금현물",
     "SCHP":      "물가연동채 그룹",
@@ -98,12 +99,13 @@ SLOT_NAMES = {
 SLOT_CLASS = {
     "133690.KS": ("주식 · 미국 성장주", "#818cf8"),
     "360750.KS": ("주식 · 미국 대형주", "#22c55e"),
+    "BRK-B":     ("주식 · 미국 대형주(개별주)", "#3b82f6"),
     "102110.KS": ("주식 · 국내",        "#a78bfa"),
     "0072R0.KS": ("실물자산 · 금",      "#eab308"),
     "SCHP":      ("안전자산 · 채권",    "#f472b6"),
 }
 # 위험/안전 구분 (요약 표시용)
-RISK_SLOTS = ("133690.KS", "360750.KS", "102110.KS")
+RISK_SLOTS = ("133690.KS", "360750.KS", "102110.KS", "BRK-B")
 SAFE_SLOTS = ("0072R0.KS", "SCHP")
 
 # 전환 규칙
@@ -118,17 +120,16 @@ HOLDINGS = {
     "360750.KS": {"qty": 0,   "type": "kr", "name": "TIGER 미국S&P500"},
     "102110.KS": {"qty": 69,  "type": "kr", "name": "TIGER 200"},
     "0072R0.KS": {"qty": 0,   "type": "kr", "name": "TIGER KRX금현물"},
-    # GLD(미국상장, 19주 보유중) — 국내상장(0072R0.KS)으로 이전 예정. 매도 후 qty 0으로.
-    "GLD":       {"qty": 19,  "type": "us", "name": "GLD (매도예정→TIGER KRX금현물)"},
+    # GLD(미국상장) — 2026-08 매도 완료. 매도대금은 TIGER KRX금현물 등 v4.0 재배분에 사용.
+    "GLD":       {"qty": 0,   "type": "us", "name": "GLD (매도완료)"},
     "SCHP":      {"qty": 0,   "type": "us", "name": "SCHP"},
     "468370.KS": {"qty": 917, "type": "kr", "name": "KODEX 미국인플레이션국채액티브"},
     "329750.KS": {"qty": 68,  "type": "kr", "name": "TIGER 미국달러단기채권액티브"},
-    # 정리 대상 — 전량 매도 예정(2026-08 확정): 4.9% 대출 2,872만원 상환 +
+    # 정리 대상 — 2026-08 전량 매도 완료: 4.9% 대출 2,872만원 상환 +
     # 잔여는 ISA 국내상장 ETF(TIGER 미국나스닥100 등)로 재편입.
-    # 매도 완료 후 이 3종목 qty를 0으로 갱신할 것.
-    "BRK-B":     {"qty": 24,  "type": "us", "name": "BRK.B (매도예정)"},
-    "SCHD":      {"qty": 139, "type": "us", "name": "SCHD (매도예정)"},
-    "VOO":       {"qty": 15,  "type": "us", "name": "VOO (매도예정)"},
+    "BRK-B":     {"qty": 0,  "type": "us", "name": "BRK.B (2026-08 재편입 결정 — 신규매수 필요, 해외주식계좌)"},
+    "SCHD":      {"qty": 0, "type": "us", "name": "SCHD (매도완료)"},
+    "VOO":       {"qty": 0,  "type": "us", "name": "VOO (매도완료)"},
 }
 # SCHP 슬롯은 국내 대체 ETF와 합산 관리
 SCHP_GROUP = ("SCHP", "468370.KS", "329750.KS")
@@ -244,7 +245,7 @@ def get_portfolio(phase, usdkrw, prices):
             slot_values[slot] = sum(values.get(t, 0.0) for t in SCHP_GROUP)
         else:
             slot_values[slot] = values.get(slot, 0.0)
-    excluded = sum(values.get(t, 0.0) for t in ("BRK-B", "SCHD", "VOO", "GLD"))
+    excluded = sum(values.get(t, 0.0) for t in ("SCHD", "VOO", "GLD", "360750.KS"))
     total = sum(slot_values.values()) + excluded
     if total <= 0:
         return None, 0, excluded, "보유 자산 평가액 0 — 가격 조회 실패 추정"
@@ -305,105 +306,120 @@ def get_pension_status(account_name, phase):
 
 def build_html(now, close, ma200, dev, phase, changed, reason, rows, total, excluded,
                btc_bal, btc_usd, usdkrw, err, pension_data=None):
-    color = "#22c55e" if phase == "공격" else "#38bdf8"
+    color = "#16a34a" if phase == "공격" else "#0284c7"
+    bg_light = "#f0fdf4" if phase == "공격" else "#eff6ff"
     tgt = TARGETS[phase]
     risk_t = sum(v for k, v in tgt.items() if k in RISK_SLOTS)
     safe_t = sum(v for k, v in tgt.items() if k in SAFE_SLOTS)
     risk_c = sum(r["cur"] for r in (rows or []) if r["slot"] in RISK_SLOTS)
     safe_c = sum(r["cur"] for r in (rows or []) if r["slot"] in SAFE_SLOTS)
     rebal = "".join(
-        f"""<tr style="border-bottom:1px solid #1a1a1a">
-          <td style="padding:8px 14px;color:#ddd">{SLOT_NAMES.get(r['slot'], r['slot'])}
-            <div style="color:{SLOT_CLASS.get(r['slot'],('','#666'))[1]};font-size:10px;margin-top:2px">{SLOT_CLASS.get(r['slot'],('',''))[0]}</div>
+        f"""<tr style="background:{'#ffffff' if i % 2 == 0 else '#f8fafc'};border-bottom:1px solid #e2e8f0">
+          <td style="padding:10px 14px;color:#1e293b;font-weight:600">{SLOT_NAMES.get(r['slot'], r['slot'])}
+            <div style="color:{SLOT_CLASS.get(r['slot'],('','#64748b'))[1]};font-size:10px;margin-top:2px;font-weight:400">{SLOT_CLASS.get(r['slot'],('',''))[0]}</div>
           </td>
-          <td style="padding:8px 14px;color:#888;text-align:right">{r['target']}%</td>
-          <td style="padding:8px 14px;color:#fff;text-align:right;font-family:monospace">{r['cur']}%</td>
-          <td style="padding:8px 14px;text-align:right;font-family:monospace;color:{'#ef4444' if r['over'] else '#666'}">{r['diff']:+.1f}%p</td>
-          <td style="padding:8px 14px;color:#666;text-align:right">±{r['band']}%p</td>
-        </tr>""" for r in (rows or []))
-    return f"""<html><body style="background:#070707;color:#ddd;font-family:-apple-system,sans-serif;padding:24px">
-  <div style="max-width:680px;margin:0 auto">
-    <div style="font-size:11px;color:#555;letter-spacing:0.15em">PORTFOLIO SYSTEM v4.0</div>
-    <div style="font-size:20px;color:#fff;margin:6px 0 20px">{now}</div>
+          <td style="padding:10px 14px;color:#64748b;text-align:right">{r['target']}%</td>
+          <td style="padding:10px 14px;color:#0f172a;text-align:right;font-family:monospace;font-weight:700">{r['cur']}%</td>
+          <td style="padding:10px 14px;text-align:right;font-family:monospace;font-weight:700;color:{'#dc2626' if r['over'] else '#94a3b8'}">{r['diff']:+.1f}%p</td>
+          <td style="padding:10px 14px;color:#94a3b8;text-align:right">±{r['band']}%p</td>
+        </tr>""" for i, r in enumerate(rows or []))
+    return f"""<html><body style="background:#f1f5f9;color:#1e293b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:24px;margin:0">
+  <div style="max-width:680px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1)">
+  <div style="padding:28px">
+    <div style="font-size:11px;color:#94a3b8;letter-spacing:0.15em;font-weight:700">PORTFOLIO SYSTEM v4.0</div>
+    <div style="font-size:20px;color:#0f172a;margin:6px 0 20px;font-weight:700">{now}</div>
 
-    {f'<div style="background:#1a0000;border:1px solid #442222;border-radius:6px;padding:12px;margin-bottom:20px;color:#f87171">⚠️ {err}</div>' if err else ''}
+    {f'<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px;margin-bottom:20px;color:#b91c1c;font-weight:600">⚠️ {err}</div>' if err else ''}
 
-    <div style="background:{'#001400' if phase=='공격' else '#00121a'};border:1px solid {color};border-radius:8px;padding:18px;margin-bottom:24px">
-      <div style="font-size:11px;color:#666;letter-spacing:0.1em">현재 단계</div>
-      <div style="font-size:28px;font-weight:700;color:{color};margin:4px 0">{phase}</div>
-      {f'<div style="color:#facc15;font-size:13px;margin-top:8px">🔀 {reason}</div>' if changed and reason else ''}
-      {f'<div style="color:#888;font-size:12px;margin-top:8px">{reason}</div>' if (not changed and reason) else ''}
+    <!-- 메인계좌 헤더 -->
+    <div style="background:{bg_light};border:1.5px solid {color};border-radius:10px;padding:20px;margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="background:{color};color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px">메인계좌</span>
+        <span style="font-size:11px;color:#64748b;letter-spacing:0.1em">현재 단계</span>
+      </div>
+      <div style="font-size:28px;font-weight:800;color:{color};margin:4px 0">{phase}</div>
+      {f'<div style="color:#b45309;font-size:13px;margin-top:8px;font-weight:600">🔀 {reason}</div>' if changed and reason else ''}
+      {f'<div style="color:#64748b;font-size:12px;margin-top:8px">{reason}</div>' if (not changed and reason) else ''}
     </div>
 
-    <div style="font-size:10px;color:#555;letter-spacing:0.1em;margin-bottom:10px">▸ 전환 지표 (200일선)</div>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:24px;background:#0d0d0d;border-radius:6px">
-      <tr><td style="padding:8px 14px;color:#888">S&P500 종가</td><td style="padding:8px 14px;text-align:right;color:#fff;font-family:monospace">{close:,.2f}</td></tr>
-      <tr><td style="padding:8px 14px;color:#888">200일선</td><td style="padding:8px 14px;text-align:right;color:#fff;font-family:monospace">{ma200:,.2f}</td></tr>
-      <tr><td style="padding:8px 14px;color:#888">이격도</td><td style="padding:8px 14px;text-align:right;font-family:monospace;color:{'#22c55e' if dev>0 else '#ef4444'}">{dev:+.2f}%</td></tr>
-      <tr><td style="padding:8px 14px;color:#888">방어 전환선 (-3%)</td><td style="padding:8px 14px;text-align:right;color:#888;font-family:monospace">{ma200*DEFENSE_TRIGGER:,.2f}</td></tr>
+    <div style="font-size:11px;color:#94a3b8;letter-spacing:0.1em;margin-bottom:10px;font-weight:700">▸ 전환 지표 (200일선)</div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:24px;background:#f8fafc;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0">
+      <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:10px 14px;color:#64748b">S&amp;P500 종가</td><td style="padding:10px 14px;text-align:right;color:#0f172a;font-family:monospace;font-weight:700">{close:,.2f}</td></tr>
+      <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:10px 14px;color:#64748b">200일선</td><td style="padding:10px 14px;text-align:right;color:#0f172a;font-family:monospace;font-weight:700">{ma200:,.2f}</td></tr>
+      <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:10px 14px;color:#64748b">이격도</td><td style="padding:10px 14px;text-align:right;font-family:monospace;font-weight:700;color:{'#16a34a' if dev>0 else '#dc2626'}">{dev:+.2f}%</td></tr>
+      <tr><td style="padding:10px 14px;color:#64748b">방어 전환선 (-3%)</td><td style="padding:10px 14px;text-align:right;color:#64748b;font-family:monospace">{ma200*DEFENSE_TRIGGER:,.2f}</td></tr>
     </table>
 
-    <div style="font-size:10px;color:#555;letter-spacing:0.1em;margin-bottom:10px">▸ 자산군 구성</div>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;background:#0d0d0d;border-radius:6px">
-      <tr>
-        <td style="padding:12px 14px;color:#888">위험자산 <span style="color:#555;font-size:11px">(주식)</span></td>
-        <td style="padding:12px 14px;text-align:right;font-family:monospace;color:#fff">{risk_c:.1f}% <span style="color:#555">/ 목표 {risk_t}%</span></td>
+    <div style="font-size:11px;color:#94a3b8;letter-spacing:0.1em;margin-bottom:10px;font-weight:700">▸ 자산군 구성</div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;background:#f8fafc;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0">
+      <tr style="border-bottom:1px solid #e2e8f0">
+        <td style="padding:12px 14px;color:#64748b">🔴 위험자산 <span style="color:#94a3b8;font-size:11px">(주식)</span></td>
+        <td style="padding:12px 14px;text-align:right;font-family:monospace;font-weight:700;color:#0f172a">{risk_c:.1f}% <span style="color:#94a3b8;font-weight:400">/ 목표 {risk_t}%</span></td>
       </tr>
       <tr>
-        <td style="padding:12px 14px;color:#888">안전자산 <span style="color:#555;font-size:11px">(채권·금)</span></td>
-        <td style="padding:12px 14px;text-align:right;font-family:monospace;color:#fff">{safe_c:.1f}% <span style="color:#555">/ 목표 {safe_t}%</span></td>
+        <td style="padding:12px 14px;color:#64748b">🔵 안전자산 <span style="color:#94a3b8;font-size:11px">(채권·금)</span></td>
+        <td style="padding:12px 14px;text-align:right;font-family:monospace;font-weight:700;color:#0f172a">{safe_c:.1f}% <span style="color:#94a3b8;font-weight:400">/ 목표 {safe_t}%</span></td>
       </tr>
     </table>
 
-    <div style="font-size:10px;color:#555;letter-spacing:0.1em;margin-bottom:10px">▸ 목표 비중 대비 현황 ({phase})</div>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:8px">
-      <tr style="border-bottom:1px solid #222">
-        <td style="padding:6px 14px;color:#555;font-size:11px">자산</td>
-        <td style="padding:6px 14px;color:#555;font-size:11px;text-align:right">목표</td>
-        <td style="padding:6px 14px;color:#555;font-size:11px;text-align:right">현재</td>
-        <td style="padding:6px 14px;color:#555;font-size:11px;text-align:right">이탈</td>
-        <td style="padding:6px 14px;color:#555;font-size:11px;text-align:right">허용밴드</td>
+    <div style="font-size:11px;color:#94a3b8;letter-spacing:0.1em;margin-bottom:10px;font-weight:700">▸ 목표 비중 대비 현황 ({phase})</div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:8px;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0">
+      <tr style="background:#1e293b">
+        <td style="padding:8px 14px;color:#cbd5e1;font-size:11px;font-weight:700">자산</td>
+        <td style="padding:8px 14px;color:#cbd5e1;font-size:11px;text-align:right;font-weight:700">목표</td>
+        <td style="padding:8px 14px;color:#cbd5e1;font-size:11px;text-align:right;font-weight:700">현재</td>
+        <td style="padding:8px 14px;color:#cbd5e1;font-size:11px;text-align:right;font-weight:700">이탈</td>
+        <td style="padding:8px 14px;color:#cbd5e1;font-size:11px;text-align:right;font-weight:700">허용밴드</td>
       </tr>
       {rebal}
     </table>
-    <div style="color:#666;font-size:11px;margin-bottom:24px">총 평가액 {total:,}원{f' · 미편입 자산(BRK.B·SCHD·VOO·GLD) {excluded:,}원 포함 — v4.0 배분 외, 매도 후 재배분 필요' if excluded else ''}</div>
+    <div style="color:#64748b;font-size:11px;margin-bottom:28px">총 평가액 {total:,}원{f' · 미편입 자산(SCHD·VOO·GLD·TIGER 미국S&P500) {excluded:,}원 포함 — v4.0 배분 외, 매도 후 재배분 필요' if excluded else ''}</div>
 
     {"".join(_pension_block(name, phase, d) for name, d in (pension_data or {}).items())}
 
-    {f'''<div style="font-size:10px;color:#555;letter-spacing:0.1em;margin-bottom:10px">▸ ₿ BTC (별도 관리)</div>
-    <div style="background:#0d0d0d;border-radius:6px;padding:12px 14px;margin-bottom:24px;color:#ccc;font-size:13px">
+    {f'''<div style="font-size:11px;color:#94a3b8;letter-spacing:0.1em;margin-bottom:10px;font-weight:700">▸ ₿ BTC (별도 관리)</div>
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px;margin-bottom:24px;color:#92400e;font-size:13px;font-weight:600">
       {btc_bal} BTC{f' · ${btc_usd:,.0f}' if btc_usd else ''}
     </div>''' if btc_bal else ''}
 
-    <div style="color:#444;font-size:10px;border-top:1px solid #1a1a1a;padding-top:14px">
+    <div style="color:#94a3b8;font-size:11px;border-top:1px solid #e2e8f0;padding-top:16px;margin-top:8px;line-height:1.7">
       Portfolio System v4.0 · 26년 백테스트 CAGR 8.6% / MDD -17.6%<br>
       전환: 공격→방어(200일선 -3% 이탈) / 방어→공격(200일선 회복 + 90일 경과)<br>
       연금저축·IRP는 코스피 제외(연금소득세 부과로 비과세 실익 없음) + 위험자산 70% 상한 준수
     </div>
   </div>
+  </div>
 </body></html>"""
 
 
+_ACCOUNT_COLORS = {"연금저축": "#9333ea", "IRP": "#ea580c"}
+
+
 def _pension_block(account_name, phase, data):
-    """연금저축·IRP 계좌 블록 HTML 생성"""
+    """연금저축·IRP 계좌 블록 HTML 생성 (계좌별 고유 색상으로 구분)"""
     rows, total, other = data
     if not rows:
         return ""
+    acc_color = _ACCOUNT_COLORS.get(account_name, "#64748b")
     body = "".join(
-        f"""<tr style="border-bottom:1px solid #1a1a1a">
-          <td style="padding:8px 14px;color:#ddd">{PENSION_SLOT_NAMES.get(r['slot'], r['slot'])}
-            <div style="color:#666;font-size:10px;margin-top:2px">{r['name']}</div>
+        f"""<tr style="background:{'#ffffff' if i % 2 == 0 else '#f8fafc'};border-bottom:1px solid #e2e8f0">
+          <td style="padding:10px 14px;color:#1e293b;font-weight:600">{PENSION_SLOT_NAMES.get(r['slot'], r['slot'])}
+            <div style="color:#94a3b8;font-size:10px;margin-top:2px;font-weight:400">{r['name']}</div>
           </td>
-          <td style="padding:8px 14px;color:#888;text-align:right">{r['target']}%</td>
-          <td style="padding:8px 14px;color:#fff;text-align:right;font-family:monospace">{r['cur']}%</td>
-          <td style="padding:8px 14px;text-align:right;font-family:monospace;color:{'#ef4444' if r['over'] else '#666'}">{r['diff']:+.1f}%p</td>
-        </tr>""" for r in rows)
+          <td style="padding:10px 14px;color:#64748b;text-align:right">{r['target']}%</td>
+          <td style="padding:10px 14px;color:#0f172a;text-align:right;font-family:monospace;font-weight:700">{r['cur']}%</td>
+          <td style="padding:10px 14px;text-align:right;font-family:monospace;font-weight:700;color:{'#dc2626' if r['over'] else '#94a3b8'}">{r['diff']:+.1f}%p</td>
+        </tr>""" for i, r in enumerate(rows))
     return f"""
-    <div style="font-size:10px;color:#555;letter-spacing:0.1em;margin-bottom:10px">▸ {account_name} ({phase})</div>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:8px">
+    <div style="display:flex;align-items:center;gap:8px;margin:28px 0 10px">
+      <span style="background:{acc_color};color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px">{account_name}</span>
+      <span style="font-size:11px;color:#94a3b8;letter-spacing:0.1em;font-weight:700">▸ {phase}</span>
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:8px;border-radius:8px;overflow:hidden;border:1.5px solid {acc_color}33">
+      <tr style="background:{acc_color}"><td colspan="4" style="padding:2px"></td></tr>
       {body}
     </table>
-    <div style="color:#666;font-size:11px;margin-bottom:24px">총 평가액 {total:,}원{f' · 계좌 규정상 제외 대상 {other:,}원 포함' if other else ''}</div>
+    <div style="color:#64748b;font-size:11px;margin-bottom:8px">총 평가액 {total:,}원{f' · 계좌 규정상 제외 대상 {other:,}원 포함' if other else ''}</div>
 """
 
 
