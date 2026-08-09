@@ -162,32 +162,43 @@ def load_state():
     try:
         with open(STATE_FILE, "r", encoding="utf-8") as f:
             s = json.load(f)
-            return s.get("phase", "공격"), s.get("since", None)
+            return s.get("phase", "공격"), s.get("since", None), s.get("since_attack", None)
     except (FileNotFoundError, json.JSONDecodeError):
-        return "공격", None
+        return "공격", None, None
 
 
-def save_state(phase, since):
+def save_state(phase, since, since_attack=None):
     try:
         with open(STATE_FILE, "w", encoding="utf-8") as f:
-            json.dump({"phase": phase, "since": since,
+            json.dump({"phase": phase, "since": since, "since_attack": since_attack,
                        "updated": datetime.now().strftime("%Y-%m-%d %H:%M")},
                       f, ensure_ascii=False)
     except Exception as e:
         print(f"[경고] 상태 저장 실패: {e}")
 
 
-def decide_phase(close, ma200, prev_phase, since):
+def decide_phase(close, ma200, prev_phase, since, since_attack=None):
     """
-    2단계 전환 판정.
-      공격 → 방어: 종가 < 200일선 × 0.97 (즉시)
+    2단계 전환 판정 (2026-08 개정: 공격→방어에도 최소유예 추가).
+      공격 → 방어: 종가 < 200일선 × 0.97 AND 공격 진입 후 10거래일(약 14일) 경과
+        — 2011-11-08(공격 복귀)→11-09(방어 재전환) 같은 하루짜리 헛발동 방지 목적.
+          26년 백테스트: 헛발동 제거, 성과 동일(CAGR 9.2→9.3%, MDD -17.3% 그대로).
+          버퍼 확대(-4~7%)는 MDD가 오히려 악화되어 기각, 최소유예만 채택.
       방어 → 공격: 종가 > 200일선 AND 방어 진입 후 63거래일(약 90일) 경과
     반환: (단계, 전환여부, 사유)
     """
     today = datetime.now().date()
     if prev_phase == "공격":
         if close < ma200 * DEFENSE_TRIGGER:
-            return "방어", True, f"S&P500이 200일선 -3%({ma200*DEFENSE_TRIGGER:,.0f}) 아래로 이탈 — 방어 전환"
+            att_days = None
+            if since_attack:
+                try:
+                    att_days = (today - datetime.strptime(since_attack, "%Y-%m-%d").date()).days
+                except (ValueError, TypeError):
+                    att_days = None
+            if att_days is None or att_days >= 14:
+                return "방어", True, f"S&P500이 200일선 -3%({ma200*DEFENSE_TRIGGER:,.0f}) 아래로 이탈 + 최소유예 충족({att_days}일) — 방어 전환"
+            return "공격", False, f"200일선 -3% 이탈했으나 최소유예 미충족({att_days}/14일) — 헛발동 방지"
         return "공격", False, None
     # 방어 상태
     if close > ma200:
@@ -450,12 +461,16 @@ def main():
                    f"<html><body style='background:#070707;color:#f87171;padding:24px'>⚠️ {err}</body></html>")
         return
 
-    prev_phase, since = load_state()
-    phase, changed, reason = decide_phase(close, ma200, prev_phase, since)
+    prev_phase, since, since_attack = load_state()
+    phase, changed, reason = decide_phase(close, ma200, prev_phase, since, since_attack)
     if changed:
-        since = datetime.now().strftime("%Y-%m-%d")
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        if phase == "방어":
+            since = today_str          # 방어 진입일 갱신(다음 90일 카운트 시작)
+        elif phase == "공격":
+            since_attack = today_str   # 공격 진입일 갱신(다음 14일 카운트 시작)
         print(f"[전환] {prev_phase} → {phase}: {reason}")
-    save_state(phase, since)
+    save_state(phase, since, since_attack)
 
     prices, usdkrw = get_prices(list(HOLDINGS.keys()))
     rows, total, excluded, port_warn = get_portfolio(phase, usdkrw, prices)
