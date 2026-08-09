@@ -33,7 +33,7 @@ EMAIL_PASS = "fuvw zbun ydje supp"
 #   전환 신호(200일선)는 세 계좌 모두 동일하게 적용
 # ============================================================
 TARGETS = {
-    "공격": {"133690.KS": 25, "BRK-B": 20, "102110.KS": 15, "0072R0.KS": 15, "SCHP": 25},
+    "공격": {"133690.KS": 25, "BRK-B": 25, "102110.KS": 10, "0072R0.KS": 15, "SCHP": 25},
     "방어": {"133690.KS": 10, "BRK-B": 10, "102110.KS": 10, "0072R0.KS": 15, "SCHP": 55},
 }
 
@@ -43,18 +43,22 @@ TARGETS = {
 #   IRP: 담보대출 없어 ETF 가능. 실제 물가연동채(TIPS) ETF를 직접 매수 가능해 SCHP 단일 구성.
 #   둘 다 코스피 제외(연금소득세 부과로 비과세 실익 없음), 위험자산 70% 상한(IRP 법정 기준) 준수.
 PENSION_TARGETS = {
+    # 연금저축은 담보대출 계좌라 펀드만 가능 — RISE 버크셔TOP10은 ETF라 편입 불가.
+    # 순수 버크셔 추종 "펀드"(증권자투자신탁) 상품은 확인되지 않아 S&P500 펀드 유지.
     "연금저축": {
         "공격": {"QQQ_PEN": 30, "SP500_PEN": 25, "GOLD_PEN": 15, "STC_PEN": 30},
         "방어": {"QQQ_PEN": 10, "SP500_PEN": 10, "GOLD_PEN": 15, "STC_PEN": 65},
     },
+    # IRP는 담보대출이 없어 ETF 매매 가능 — RISE 버크셔포트폴리오TOP10(국내상장 ETF) 사용.
     "IRP": {
-        "공격": {"QQQ_PEN": 30, "SP500_PEN": 25, "GOLD_PEN": 15, "SCHP_PEN": 30},
-        "방어": {"QQQ_PEN": 10, "SP500_PEN": 10, "GOLD_PEN": 15, "SCHP_PEN": 65},
+        "공격": {"QQQ_PEN": 30, "BRK_PEN": 25, "GOLD_PEN": 15, "SCHP_PEN": 30},
+        "방어": {"QQQ_PEN": 10, "BRK_PEN": 10, "GOLD_PEN": 15, "SCHP_PEN": 65},
     },
 }
 PENSION_SLOT_NAMES = {
     "QQQ_PEN":   "나스닥100 상품",
-    "SP500_PEN": "S&P500 상품",
+    "SP500_PEN": "S&P500 펀드 (연금저축용, ETF 편입불가)",
+    "BRK_PEN":   "RISE 버크셔포트폴리오TOP10(475350, ETF, IRP전용) — BRK.B 27.5%+13F상위10종목",
     "GOLD_PEN":  "금 상품",
     "SCHP_PEN":  "물가연동채(TIPS) ETF",
     "STC_PEN":   "초단기채 펀드",
@@ -63,7 +67,7 @@ PENSION_SLOT_NAMES = {
 PENSION_HOLDINGS = {
     "연금저축": {
         "QQQ_PEN":   {"value": 0,          "name": "신한미국나스닥100인덱스(UH)C-pe — 신규매수 필요"},
-        "SP500_PEN": {"value": 9_113_568,  "name": "삼성미국S&P500인덱스증권자투자신탁UH_C"},
+        "SP500_PEN": {"value": 9_113_568,  "name": "삼성미국S&P500인덱스증권자투자신탁UH_C — 보유중, 비중확대 필요"},
         "GOLD_PEN":  {"value": 19_949_212, "name": "KB스타골드특별자산투자신탁C-Pe"},
         "STC_PEN":   {"value": 5_871_105,  "name": "NH-Amundi USD초단기채권 (비중확대 필요, 삼성/KB단기채는 매도예정)"},
         "매도대상_기타": {"value": 12_292_321+11_044_217+16_922_063,
@@ -72,10 +76,11 @@ PENSION_HOLDINGS = {
     },
     "IRP": {
         "QQQ_PEN":   {"value": 0,          "name": "TIGER 미국나스닥100(133690) — 신규매수 필요"},
-        "SP500_PEN": {"value": 27_264_525, "name": "TIGER 미국S&P500(360750) — 비중축소 필요"},
+        "BRK_PEN":   {"value": 0,          "name": "RISE 버크셔포트폴리오TOP10(475350) — 신규매수 필요"},
         "GOLD_PEN":  {"value": 0,          "name": "TIGER KRX금현물(0072R0) — 신규매수 필요"},
         "SCHP_PEN":  {"value": 0,          "name": "KODEX iShares 미국인플레이션국채액티브(468370) — 신규매수 필요"},
-        "매도대상_기타": {"value": 11_672_540, "name": "ACE 나스닥100미국채혼합 — 매도 후 위 4종목으로 재편"},
+        "매도대상_기타": {"value": 11_672_540+27_264_525,
+                       "name": "ACE 나스닥100미국채혼합 + TIGER 미국S&P500(→RISE버크셔로 교체) 전부 매도"},
         "현금": {"value": 73_188, "name": "현금"},
     },
 }
