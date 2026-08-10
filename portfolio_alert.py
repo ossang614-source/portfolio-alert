@@ -109,7 +109,7 @@ SLOT_NAMES = {
     "360750.KS": "TIGER 미국S&P500",  # 메인계좌 목표에서 제외됨(BRK-B로 교체), 연금계좌 참고용 유지
     "BRK-B":     "버크셔 해서웨이 B주 (해외주식계좌)",
     "102110.KS": "TIGER 200 (코스피)",
-    "0072R0.KS": "TIGER KRX금현물",
+    "0072R0.KS": "금 그룹 (TIGER KRX금현물+GLD)",
     "SCHP":      "물가연동채 그룹",
 }
 # 자산군: (분류명, 색상) — 성격이 같은 자산끼리 묶어 위험 구조를 한눈에 보이게 함
@@ -138,7 +138,7 @@ HOLDINGS = {
     "102110.KS": {"qty": 69,  "type": "kr", "name": "TIGER 200"},
     "0072R0.KS": {"qty": 0,   "type": "kr", "name": "TIGER KRX금현물"},
     # GLD(미국상장) — 2026-08 매도 완료. 매도대금은 TIGER KRX금현물 등 v4.0 재배분에 사용.
-    "GLD":       {"qty": 0,   "type": "us", "name": "GLD (매도완료)"},
+    "GLD":       {"qty": 0,   "type": "us", "name": "GLD (해외주식계좌, 금 그룹 일부 — 비과세공제 활용, 매수량 미정)"},
     "SCHP":      {"qty": 0,   "type": "us", "name": "SCHP"},
     "468370.KS": {"qty": 917, "type": "kr", "name": "KODEX 미국인플레이션국채액티브"},
     "329750.KS": {"qty": 68,  "type": "kr", "name": "TIGER 미국달러단기채권액티브"},
@@ -150,6 +150,9 @@ HOLDINGS = {
 }
 # SCHP 슬롯은 국내 대체 ETF와 합산 관리
 SCHP_GROUP = ("SCHP", "468370.KS", "329750.KS")
+# 금 슬롯 그룹 — TIGER KRX금현물(국내) + GLD(해외, 연 250만원 비과세 공제 활용 목적)
+# 고정 비율 없이 보유한 만큼 합산해 목표 20%에 반영 (BRK.B와 같은 취지)
+GOLD_GROUP = ("0072R0.KS", "GLD")
 BTC_ADDRESS = "bc1q57h8sn3ykge2yh2kn46dq5gsqn92x7pl6uanlg"
 
 
@@ -315,14 +318,16 @@ def get_portfolio(phase, usdkrw, prices):
             continue
         v = p * info["qty"]
         values[tk] = v * usdkrw if info["type"] == "us" else v
-    # SCHP 슬롯은 그룹 합산
+    # SCHP·금 슬롯은 그룹 합산
     slot_values = {}
     for slot in targets:
         if slot == "SCHP":
             slot_values[slot] = sum(values.get(t, 0.0) for t in SCHP_GROUP)
+        elif slot == "0072R0.KS":
+            slot_values[slot] = sum(values.get(t, 0.0) for t in GOLD_GROUP)
         else:
             slot_values[slot] = values.get(slot, 0.0)
-    excluded = sum(values.get(t, 0.0) for t in ("SCHD", "VOO", "GLD", "360750.KS"))
+    excluded = sum(values.get(t, 0.0) for t in ("SCHD", "VOO", "360750.KS"))
     total = sum(slot_values.values()) + excluded
     if total <= 0:
         return None, 0, excluded, "보유 자산 평가액 0 — 가격 조회 실패 추정"
