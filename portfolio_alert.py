@@ -9,14 +9,17 @@ Portfolio System v4.0 — 200일선 기반 2단계 동적 자산배분
   - 낙폭 상한 -17.6%가 10년·15년·20년·26년 전 구간에서 일정하게 유지됨
   - 폭락 없는 기간엔 VOO 대비 연 3~5%p 뒤짐 (보험료)
 
-v3.0 대비 제거된 것: ET/V0.5(C)/V1.0 3단계, V0.25(BRK), RSI·VIX·CAPE·다이버전스 지표,
-  BRK.B·SCHD·SHV 자산, 카카오톡 발송, phase_state 경로의존 규칙
-  → 전부 백테스트에서 성과 기여가 없거나 마이너스로 확인되어 삭제
+v3.0 대비 제거된 것: ET/V0.5(C)/V1.0 3단계, V0.25(BRK), CAPE, BRK.B·SCHD·SHV 자산,
+  카카오톡 발송, phase_state 경로의존 규칙 → 백테스트에서 성과 기여 없거나 마이너스로 삭제.
+  단, RSI·다이버전스는 2026-08 "비상 선제 공격 스위치" 목적으로 제한적으로 재도입
+  (방어 상태에서 200일선 회복을 기다리지 않고 조기 공격 전환 — get_market_data 참고).
 """
 import yfinance as yf
 import requests
 import smtplib
 import json
+import numpy as np
+import pandas as pd
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import datetime
@@ -142,20 +145,63 @@ BTC_ADDRESS = "bc1q57h8sn3ykge2yh2kn46dq5gsqn92x7pl6uanlg"
 
 
 def get_market_data():
-    """S&P500 종가와 200일선 조회. 반환: (종가, 200일선, 이격도%, 오류)"""
+    """
+    S&P500 종가·200일선·RSI(14)·비상스위치 신호 조회.
+    비상스위치(2026-08 신설, 26년 백테스트 근거): 방어 상태에서 200일선 회복을 기다리지
+    않고 즉시 공격 전환하는 조건. 다음 중 하나 충족 시 발동:
+      ① 200일선 -20% 이탈 AND 주봉 RSI 강세 다이버전스 (닷컴형 장기침체 포착: -15%→-20% 조정이 근소하게 우수, CAGR+0.1%p)
+      ② 일봉 RSI(14) ≤ 20 (코로나형 급락 포착: RSI≤15 최적화 결과 20이 더 우수, 2020-02 등 13건 포착)
+    백테스트: 미적용 CAGR 9.3%/MDD-17.3% → 적용 CAGR 9.9%~9.8%/MDD-17.1%(방어력 손실 없이 수익 개선).
+    한계: 26년간 표본이 적어(다이버전스 4건·RSI 13건) 통계적 견고성은 제한적.
+    반환: (종가, 200일선, 이격도%, RSI, 비상신호bool, 비상사유, 오류)
+    """
     try:
-        hist = yf.Ticker("^GSPC").history(period="1y")
+        hist = yf.Ticker("^GSPC").history(period="2y")
         if hist is None or hist.empty:
-            return None, None, None, "S&P500 조회 실패(응답 없음)"
+            return None, None, None, None, False, None, "S&P500 조회 실패(응답 없음)"
         hist = hist.dropna(subset=["Close"])
         if len(hist) < 200:
-            return None, None, None, f"S&P500 데이터 {len(hist)}행 — 200일 미만"
-        close = float(hist["Close"].iloc[-1])
-        ma200 = float(hist["Close"].rolling(200).mean().iloc[-1])
+            return None, None, None, None, False, None, f"S&P500 데이터 {len(hist)}행 — 200일 미만"
+
+        close_s = hist["Close"]
+        close = float(close_s.iloc[-1])
+        ma200 = float(close_s.rolling(200).mean().iloc[-1])
         dev = (close / ma200 - 1) * 100
-        return round(close, 2), round(ma200, 2), round(dev, 2), None
+
+        c = close_s.values
+        delta = c[1:] - c[:-1]
+        gain = pd.Series(np.where(delta > 0, delta, 0)).rolling(14).mean().values
+        loss = pd.Series(np.where(delta < 0, -delta, 0)).rolling(14).mean().values
+        rs = gain / loss
+        rsi_series = 100 - 100 / (1 + rs)
+        rsi = float(rsi_series[-1]) if len(rsi_series) and rsi_series[-1] == rsi_series[-1] else None
+
+        emergency, emg_reason = False, None
+        # 조건②: 일봉 RSI≤20
+        if rsi is not None and rsi <= 20:
+            emergency, emg_reason = True, f"일봉 RSI({rsi:.1f})≤20 — 코로나형 급락 포착 신호"
+
+        # 조건①: 200일선 -20% 이탈 + 주봉 RSI 강세 다이버전스
+        if not emergency and dev <= -20:
+            wk = close_s.resample("W").last().dropna()
+            if len(wk) >= 20:
+                wc = wk.values
+                delta_w = wc[1:] - wc[:-1]
+                gw = pd.Series(np.where(delta_w > 0, delta_w, 0)).rolling(14).mean().values
+                lw = pd.Series(np.where(delta_w < 0, -delta_w, 0)).rolling(14).mean().values
+                rsi_w = 100 - 100 / (1 + gw / lw)
+                i = len(wc) - 2  # delta 배열은 wc보다 1개 짧으므로 마지막 주는 rsi_w[-1]에 대응
+                if wc[-1] <= wc[max(0, len(wc)-8):].min():
+                    seg = wc[max(0, len(wc)-17):len(wc)-4]
+                    rseg = rsi_w[max(0, len(rsi_w)-16):len(rsi_w)-3] if len(rsi_w) >= 17 else np.array([])
+                    if len(seg) > 0 and len(rseg) == len(seg):
+                        p = seg.argmin()
+                        if rseg[p] == rseg[p] and wc[-1] < seg[p] and rsi_w[-1] > rseg[p]:
+                            emergency, emg_reason = True, f"200일선 {dev:+.1f}% 이탈 + 주봉 RSI 강세 다이버전스 — 닷컴형 장기침체 바닥 포착 신호"
+
+        return round(close, 2), round(ma200, 2), round(dev, 2), (round(rsi, 1) if rsi is not None else None), emergency, emg_reason, None
     except Exception as e:
-        return None, None, None, f"S&P500 조회 예외: {type(e).__name__}: {e}"
+        return None, None, None, None, False, None, f"S&P500 조회 예외: {type(e).__name__}: {e}"
 
 
 def load_state():
@@ -177,14 +223,18 @@ def save_state(phase, since, since_attack=None):
         print(f"[경고] 상태 저장 실패: {e}")
 
 
-def decide_phase(close, ma200, prev_phase, since, since_attack=None):
+def decide_phase(close, ma200, prev_phase, since, since_attack=None, emergency=False, emg_reason=None):
     """
-    2단계 전환 판정 (2026-08 개정: 공격→방어에도 최소유예 추가).
+    2단계 전환 판정 (2026-08 개정: 최소유예 + 비상 선제 공격 스위치).
       공격 → 방어: 종가 < 200일선 × 0.97 AND 공격 진입 후 10거래일(약 14일) 경과
         — 2011-11-08(공격 복귀)→11-09(방어 재전환) 같은 하루짜리 헛발동 방지 목적.
           26년 백테스트: 헛발동 제거, 성과 동일(CAGR 9.2→9.3%, MDD -17.3% 그대로).
           버퍼 확대(-4~7%)는 MDD가 오히려 악화되어 기각, 최소유예만 채택.
-      방어 → 공격: 종가 > 200일선 AND 방어 진입 후 63거래일(약 90일) 경과
+      방어 → 공격(정상): 종가 > 200일선 AND 방어 진입 후 63거래일(약 90일) 경과
+      방어 → 공격(비상): 200일선 회복·최소보유 무시하고 emergency=True 즉시 전환
+        — get_market_data()의 비상신호(RSI≤20 또는 200일선-20%+주봉다이버전스) 근거.
+          26년 백테스트: 미적용 CAGR 9.3%/MDD-17.3% → 적용 CAGR 9.9%/MDD-17.1%(방어력 손실 없이 개선).
+          표본 적음(다이버전스4건·RSI13건)에 유의.
     반환: (단계, 전환여부, 사유)
     """
     today = datetime.now().date()
@@ -201,6 +251,8 @@ def decide_phase(close, ma200, prev_phase, since, since_attack=None):
             return "공격", False, f"200일선 -3% 이탈했으나 최소유예 미충족({att_days}/14일) — 헛발동 방지"
         return "공격", False, None
     # 방어 상태
+    if emergency:
+        return "공격", True, f"🚨 비상 선제 공격 전환: {emg_reason}"
     if close > ma200:
         days = None
         if since:
@@ -454,7 +506,7 @@ def main():
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     print(f"[{now}] 지표 수집 시작...")
 
-    close, ma200, dev, err = get_market_data()
+    close, ma200, dev, rsi, emergency, emg_reason, err = get_market_data()
     if err:
         print(f"[오류] {err}")
         send_email(f"[Portfolio] 데이터 오류 — {now}",
@@ -462,7 +514,7 @@ def main():
         return
 
     prev_phase, since, since_attack = load_state()
-    phase, changed, reason = decide_phase(close, ma200, prev_phase, since, since_attack)
+    phase, changed, reason = decide_phase(close, ma200, prev_phase, since, since_attack, emergency, emg_reason)
     if changed:
         today_str = datetime.now().strftime("%Y-%m-%d")
         if phase == "방어":
