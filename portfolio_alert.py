@@ -77,6 +77,8 @@ PENSION_SLOT_NAMES = {
 }
 # 연금저축·IRP 보유 현황 — 상품명은 실제 계좌 상품으로 매칭해 직접 채울 것
 PENSION_HOLDINGS = {
+    # 연금저축: 담보대출 계좌라 펀드만 가능. 펀드는 야후파이낸스 시세조회 불가(국내 비상장)
+    # → 좌수 대신 "평가액(value)"을 증권사 앱에서 직접 확인해 수동 입력.
     "연금저축": {
         "QQQ_PEN":   {"value": 0,          "name": "신한미국나스닥100인덱스(UH)C-pe — 신규매수 필요"},
         "SP500_PEN": {"value": 9_113_568,  "name": "삼성미국S&P500인덱스증권자투자신탁UH_C — 보유중, 비중확대 필요"},
@@ -86,16 +88,21 @@ PENSION_HOLDINGS = {
                        "name": "삼성달러표시단기채권+KB글로벌단기채(→NH-Amundi로 통합)+NH-Amundi필승코리아(코스피, 매도)"},
         "현금": {"value": 2_319_351, "name": "현금"},
     },
-    "IRP": {
-        "QQQ_PEN":   {"value": 0,          "name": "TIGER 미국나스닥100(133690) — 신규매수 필요"},
-        "BRK_PEN":   {"value": 0,          "name": "RISE 버크셔포트폴리오TOP10(475350) — 신규매수 필요"},
-        "GOLD_PEN":  {"value": 0,          "name": "TIGER KRX금현물(0072R0) — 신규매수 필요"},
-        "SCHP_PEN":  {"value": 0,          "name": "KODEX iShares 미국인플레이션국채액티브(468370) — 신규매수 필요"},
-        "매도대상_기타": {"value": 11_672_540+27_264_525,
-                       "name": "ACE 나스닥100미국채혼합 + TIGER 미국S&P500(→RISE버크셔로 교체) 전부 매도"},
-        "현금": {"value": 73_188, "name": "현금"},
-    },
 }
+
+# IRP: 담보대출 없어 실제 상장 ETF 매매 — 메인계좌처럼 "수량(qty)" 입력 시 자동 시세조회.
+IRP_HOLDINGS = {
+    "QQQ_PEN":   {"ticker": "133690.KS", "qty": 63, "name": "TIGER 미국나스닥100"},
+    "BRK_PEN":   {"ticker": "475350.KS", "qty": 651, "name": "RISE 버크셔포트폴리오TOP10"},
+    "GOLD_PEN":  {"ticker": "0072R0.KS", "qty": 446, "name": "TIGER KRX금현물"},
+    "SCHP_PEN":  {"ticker": "468370.KS", "qty": 1072, "name": "KODEX iShares 미국인플레이션국채액티브"},
+}
+# 매도 대상(정리 예정) — 실제 보유수량 반영, 자동 시세조회
+IRP_SELL_TARGETS = {
+    "273130.KS": {"qty": 0, "name": "ACE 나스닥100미국채혼합 (매도예정)"},
+    "360750.KS": {"qty": 0, "name": "TIGER 미국S&P500 (→RISE버크셔로 교체, 매도예정)"},
+}
+IRP_CASH = 73_188
 
 # 세액공제 목적 연간 신규 납입 계획 (매년 초 납입 가정)
 PENSION_ANNUAL_CONTRIB = {
@@ -105,7 +112,7 @@ PENSION_ANNUAL_CONTRIB = {
 
 # 슬롯 표시명 및 자산군 분류 (이메일 표시용)
 SLOT_NAMES = {
-    "133690.KS": "TIGER 미국나스닥100",
+    "133690.KS": "나스닥100 그룹 (TIGER 미국나스닥100+QQQ)",
     "360750.KS": "TIGER 미국S&P500",  # 메인계좌 목표에서 제외됨(BRK-B로 교체), 연금계좌 참고용 유지
     "BRK-B":     "버크셔 해서웨이 B주 (해외주식계좌)",
     "102110.KS": "TIGER 200 (코스피)",
@@ -134,22 +141,26 @@ STATE_FILE = "phase_state.json"
 # 보유 수량 (매매 시 직접 갱신)
 HOLDINGS = {
     "133690.KS": {"qty": 0,   "type": "kr", "name": "TIGER 미국나스닥100"},
+    "QQQ":       {"qty": 9,   "type": "us", "name": "QQQ (해외주식계좌, 나스닥100 그룹 일부 — 비과세공제 활용, 매수량 미정)"},
     "360750.KS": {"qty": 0,   "type": "kr", "name": "TIGER 미국S&P500"},
-    "102110.KS": {"qty": 69,  "type": "kr", "name": "TIGER 200"},
+    "102110.KS": {"qty": 15,  "type": "kr", "name": "TIGER 200"},
     "0072R0.KS": {"qty": 0,   "type": "kr", "name": "TIGER KRX금현물"},
     # GLD(미국상장) — 2026-08 매도 완료. 매도대금은 TIGER KRX금현물 등 v4.0 재배분에 사용.
-    "GLD":       {"qty": 0,   "type": "us", "name": "GLD (해외주식계좌, 금 그룹 일부 — 비과세공제 활용, 매수량 미정)"},
+    "GLD":       {"qty": 16,   "type": "us", "name": "GLD (해외주식계좌, 금 그룹 일부 — 비과세공제 활용, 매수량 미정)"},
     "SCHP":      {"qty": 0,   "type": "us", "name": "SCHP"},
     "468370.KS": {"qty": 917, "type": "kr", "name": "KODEX 미국인플레이션국채액티브"},
-    "329750.KS": {"qty": 68,  "type": "kr", "name": "TIGER 미국달러단기채권액티브"},
+    "329750.KS": {"qty": 0,  "type": "kr", "name": "TIGER 미국달러단기채권액티브"},
     # 정리 대상 — 2026-08 전량 매도 완료: 4.9% 대출 2,872만원 상환 +
     # 잔여는 ISA 국내상장 ETF(TIGER 미국나스닥100 등)로 재편입.
-    "BRK-B":     {"qty": 0,  "type": "us", "name": "BRK.B (2026-08 재편입 결정 — 신규매수 필요, 해외주식계좌)"},
+    "BRK-B":     {"qty": 13,  "type": "us", "name": "BRK.B (2026-08 재편입 결정 — 신규매수 필요, 해외주식계좌)"},
     "SCHD":      {"qty": 0, "type": "us", "name": "SCHD (매도완료)"},
     "VOO":       {"qty": 0,  "type": "us", "name": "VOO (매도완료)"},
 }
 # SCHP 슬롯은 국내 대체 ETF와 합산 관리
 SCHP_GROUP = ("SCHP", "468370.KS", "329750.KS")
+# 나스닥100 슬롯 그룹 — TIGER 미국나스닥100(국내) + QQQ(해외, 연 250만원 비과세 공제 활용 목적)
+# 고정 비율 없이 보유한 만큼 합산 (BRK.B·금 그룹과 같은 취지)
+NASDAQ_GROUP = ("133690.KS", "QQQ")
 # 금 슬롯 그룹 — TIGER KRX금현물(국내) + GLD(해외, 연 250만원 비과세 공제 활용 목적)
 # 고정 비율 없이 보유한 만큼 합산해 목표 20%에 반영 (BRK.B와 같은 취지)
 GOLD_GROUP = ("0072R0.KS", "GLD")
@@ -325,45 +336,67 @@ def get_portfolio(phase, usdkrw, prices):
             slot_values[slot] = sum(values.get(t, 0.0) for t in SCHP_GROUP)
         elif slot == "0072R0.KS":
             slot_values[slot] = sum(values.get(t, 0.0) for t in GOLD_GROUP)
+        elif slot == "133690.KS":
+            slot_values[slot] = sum(values.get(t, 0.0) for t in NASDAQ_GROUP)
         else:
             slot_values[slot] = values.get(slot, 0.0)
     excluded = sum(values.get(t, 0.0) for t in ("SCHD", "VOO", "360750.KS"))
     total = sum(slot_values.values()) + excluded
     if total <= 0:
         return None, 0, excluded, "보유 자산 평가액 0 — 가격 조회 실패 추정"
+    GROUP_MAP = {"SCHP": SCHP_GROUP, "0072R0.KS": GOLD_GROUP, "133690.KS": NASDAQ_GROUP}
     rows = []
     for slot, tgt in targets.items():
         cur_pct = slot_values[slot] / total * 100
         band = min(5.0, tgt * 0.25)   # 5/25룰
+        tickers = GROUP_MAP.get(slot, (slot,))
+        detail = [
+            {"ticker": t, "name": HOLDINGS[t]["name"], "qty": HOLDINGS[t]["qty"],
+             "value": round(values.get(t, 0.0))}
+            for t in tickers if HOLDINGS.get(t, {}).get("qty", 0) > 0
+        ]
         rows.append({
             "slot": slot, "target": tgt, "cur": round(cur_pct, 1),
             "diff": round(cur_pct - tgt, 1), "band": round(band, 1),
             "over": abs(cur_pct - tgt) > band,
             "value": round(slot_values[slot]),
+            "detail": detail,
         })
     warn = f"시세 조회 실패: {', '.join(missing)}" if missing else None
     return rows, round(total), round(excluded), warn
 
 
-def get_btc():
+def get_btc(usdkrw, main_total):
+    """
+    BTC 잔고 조회. 원화 환산액과, 메인계좌 총액 대비 5% 미만 여부를 함께 반환.
+    5% 미만이면 추가매수 안내 문구를 포함(별도 관리 자산이라 목표비중 강제는 아님).
+    반환: (BTC수량, USD단가, 원화환산액, 5%미만여부, 안내문구)
+    """
     try:
         r = requests.get(f"https://blockchain.info/balance?active={BTC_ADDRESS}", timeout=10)
         bal = r.json()[BTC_ADDRESS]["final_balance"] / 1e8
         h = yf.Ticker("BTC-USD").history(period="5d").dropna(subset=["Close"])
         usd = float(h["Close"].iloc[-1]) if len(h) else None
-        return bal, usd
+        krw = None
+        below5 = False
+        note = None
+        if usd is not None and usdkrw is not None:
+            krw = bal * usd * usdkrw
+            if main_total and main_total > 0:
+                pct = krw / main_total * 100
+                below5 = pct < 5.0
+                if below5:
+                    note = f"메인계좌 대비 {pct:.1f}% — 5% 미만, 추가매수 검토 가능"
+        return bal, usd, krw, below5, note
     except Exception:
-        return None, None
+        return None, None, None, False, None
 
 
 def get_pension_status(account_name, phase):
     """
-    연금저축·IRP 계좌의 목표 대비 현황 계산.
-    두 계좌는 상품 제약이 달라(연금저축=펀드전용·장기채배제, IRP=ETF가능·TIPS단일)
-    PENSION_TARGETS[account_name]로 서로 다른 목표 배분을 사용.
-    실제 시세 조회 없이 PENSION_HOLDINGS에 기록된 평가액(수동 갱신)을 사용 —
-    연금계좌 상품은 야후 파이낸스로 조회 불가한 국내 펀드가 대부분이므로,
-    보유현황 캡처를 볼 때마다 이 값을 직접 갱신하는 방식으로 운용.
+    연금저축 계좌의 목표 대비 현황 계산 (펀드 전용, 수동 평가액 입력).
+    펀드는 야후 파이낸스로 조회 불가한 국내 비상장 상품이므로, PENSION_HOLDINGS에
+    기록된 평가액(수동 갱신)을 사용 — 보유현황 캡처를 볼 때마다 값을 직접 갱신.
     """
     targets = PENSION_TARGETS.get(account_name, {}).get(phase, {})
     hold = PENSION_HOLDINGS.get(account_name, {})
@@ -382,12 +415,62 @@ def get_pension_status(account_name, phase):
             "target": tgt, "cur": round(cur_pct, 1),
             "diff": round(cur_pct - tgt, 1), "band": round(band, 1),
             "over": abs(cur_pct - tgt) > band,
+            "value": round(cur_val),
         })
     return rows, round(total), round(other)
 
 
+def get_irp_status(phase):
+    """
+    IRP 계좌의 목표 대비 현황 계산 (담보대출 없어 ETF 매매 가능).
+    IRP_HOLDINGS에 "수량(qty)"을 입력하면 야후 파이낸스로 실시간 시세를 조회해
+    평가액을 자동 계산 — 연금저축(펀드, 수동입력)과 달리 메인계좌 방식과 동일.
+    """
+    targets = PENSION_TARGETS.get("IRP", {}).get(phase, {})
+    tickers = [v["ticker"] for v in IRP_HOLDINGS.values()] + list(IRP_SELL_TARGETS.keys())
+    prices = {}
+    missing = []
+    for tk in tickers:
+        try:
+            h = yf.Ticker(tk).history(period="5d")
+            h = h.dropna(subset=["Close"]) if h is not None and not h.empty else None
+            prices[tk] = float(h["Close"].iloc[-1]) if h is not None and len(h) else None
+        except Exception:
+            prices[tk] = None
+        if prices[tk] is None:
+            missing.append(tk)
+
+    values = {}
+    for slot, info in IRP_HOLDINGS.items():
+        p = prices.get(info["ticker"])
+        values[slot] = (p * info["qty"]) if (p is not None and info["qty"] > 0) else 0.0
+    other = IRP_CASH
+    for tk, info in IRP_SELL_TARGETS.items():
+        p = prices.get(tk)
+        other += (p * info["qty"]) if (p is not None and info["qty"] > 0) else 0.0
+
+    total = sum(values.values()) + other
+    if total <= 0:
+        return None, 0, 0, "IRP 보유 자산 평가액 0 — 수량 미입력 또는 시세 조회 실패"
+    rows = []
+    for slot, tgt in targets.items():
+        cur_val = values.get(slot, 0.0)
+        cur_pct = cur_val / total * 100
+        band = min(5.0, tgt * 0.25)
+        info = IRP_HOLDINGS.get(slot, {})
+        rows.append({
+            "slot": slot, "name": f"{info.get('name','-')} · {info.get('qty',0)}주",
+            "target": tgt, "cur": round(cur_pct, 1),
+            "diff": round(cur_pct - tgt, 1), "band": round(band, 1),
+            "over": abs(cur_pct - tgt) > band,
+            "value": round(cur_val),
+        })
+    warn = f"IRP 시세 조회 실패: {', '.join(missing)}" if missing else None
+    return rows, round(total), round(other), warn
+
+
 def build_html(now, close, ma200, dev, phase, changed, reason, rows, total, excluded,
-               btc_bal, btc_usd, usdkrw, err, pension_data=None):
+               btc_bal, btc_usd, btc_krw, btc_below5, btc_note, usdkrw, err, pension_data=None):
     color = "#16a34a" if phase == "공격" else "#0284c7"
     bg_light = "#f0fdf4" if phase == "공격" else "#eff6ff"
     tgt = TARGETS[phase]
@@ -395,13 +478,21 @@ def build_html(now, close, ma200, dev, phase, changed, reason, rows, total, excl
     safe_t = sum(v for k, v in tgt.items() if k in SAFE_SLOTS)
     risk_c = sum(r["cur"] for r in (rows or []) if r["slot"] in RISK_SLOTS)
     safe_c = sum(r["cur"] for r in (rows or []) if r["slot"] in SAFE_SLOTS)
+    def _detail_html(detail):
+        if not detail:
+            return '<div style="color:#cbd5e1;font-size:10px;margin-top:2px">보유 없음</div>'
+        return "".join(
+            f'<div style="color:#94a3b8;font-size:10px;margin-top:2px">{it["name"]} · {it["qty"]}주 · {it["value"]:,}원</div>'
+            for it in detail
+        )
     rebal = "".join(
         f"""<tr style="background:{'#ffffff' if i % 2 == 0 else '#f8fafc'};border-bottom:1px solid #e2e8f0">
           <td style="padding:10px 14px;color:#1e293b;font-weight:600">{SLOT_NAMES.get(r['slot'], r['slot'])}
             <div style="color:{SLOT_CLASS.get(r['slot'],('','#64748b'))[1]};font-size:10px;margin-top:2px;font-weight:400">{SLOT_CLASS.get(r['slot'],('',''))[0]}</div>
+            {_detail_html(r.get('detail'))}
           </td>
           <td style="padding:10px 14px;color:#64748b;text-align:right">{r['target']}%</td>
-          <td style="padding:10px 14px;color:#0f172a;text-align:right;font-family:monospace;font-weight:700">{r['cur']}%</td>
+          <td style="padding:10px 14px;color:#0f172a;text-align:right;font-family:monospace;font-weight:700">{r['cur']}%<div style="color:#94a3b8;font-size:10px;font-weight:400">{r['value']:,}원</div></td>
           <td style="padding:10px 14px;text-align:right;font-family:monospace;font-weight:700;color:{'#dc2626' if r['over'] else '#94a3b8'}">{r['diff']:+.1f}%p</td>
           <td style="padding:10px 14px;color:#94a3b8;text-align:right">±{r['band']}%p</td>
         </tr>""" for i, r in enumerate(rows or []))
@@ -461,7 +552,8 @@ def build_html(now, close, ma200, dev, phase, changed, reason, rows, total, excl
 
     {f'''<div style="font-size:11px;color:#94a3b8;letter-spacing:0.1em;margin-bottom:10px;font-weight:700">▸ ₿ BTC (별도 관리)</div>
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px;margin-bottom:24px;color:#92400e;font-size:13px;font-weight:600">
-      {btc_bal} BTC{f' · ${btc_usd:,.0f}' if btc_usd else ''}
+      {btc_bal} BTC{f' · ${btc_usd:,.0f}' if btc_usd else ''}{f' · {btc_krw:,.0f}원' if btc_krw else ''}
+      {f'<div style="color:#b45309;font-weight:700;margin-top:6px">📈 {btc_note}</div>' if btc_below5 and btc_note else ''}
     </div>''' if btc_bal else ''}
 
     <div style="color:#94a3b8;font-size:11px;border-top:1px solid #e2e8f0;padding-top:16px;margin-top:8px;line-height:1.7">
@@ -489,7 +581,7 @@ def _pension_block(account_name, phase, data):
             <div style="color:#94a3b8;font-size:10px;margin-top:2px;font-weight:400">{r['name']}</div>
           </td>
           <td style="padding:10px 14px;color:#64748b;text-align:right">{r['target']}%</td>
-          <td style="padding:10px 14px;color:#0f172a;text-align:right;font-family:monospace;font-weight:700">{r['cur']}%</td>
+          <td style="padding:10px 14px;color:#0f172a;text-align:right;font-family:monospace;font-weight:700">{r['cur']}%<div style="color:#94a3b8;font-size:10px;font-weight:400">{r.get('value', 0):,}원</div></td>
           <td style="padding:10px 14px;text-align:right;font-family:monospace;font-weight:700;color:{'#dc2626' if r['over'] else '#94a3b8'}">{r['diff']:+.1f}%p</td>
         </tr>""" for i, r in enumerate(rows))
     return f"""
@@ -540,15 +632,20 @@ def main():
 
     prices, usdkrw = get_prices(list(HOLDINGS.keys()))
     rows, total, excluded, port_warn = get_portfolio(phase, usdkrw, prices)
-    btc_bal, btc_usd = get_btc()
+    main_total = (total or 0) + (excluded or 0)
+    btc_bal, btc_usd, btc_krw, btc_below5, btc_note = get_btc(usdkrw, main_total)
 
     # 연금저축·IRP는 메인과 동일한 200일선 신호(phase)로 판단, 배분만 별도
-    pension_data = {name: get_pension_status(name, phase) for name in PENSION_HOLDINGS}
+    pension_data = {"연금저축": get_pension_status("연금저축", phase)}
+    irp_rows, irp_total, irp_other, irp_warn = get_irp_status(phase)
+    pension_data["IRP"] = (irp_rows, irp_total, irp_other)
+    if irp_warn:
+        print(f"[경고] {irp_warn}")
 
     subject = f"[Portfolio v4.0] {'🔀 ' + prev_phase + '→' + phase if changed else phase} — {now}"
     html = build_html(now, close, ma200, dev, phase, changed, reason,
-                      rows, total, excluded, btc_bal, btc_usd, usdkrw, port_warn,
-                      pension_data)
+                      rows, total, excluded, btc_bal, btc_usd, btc_krw, btc_below5, btc_note,
+                      usdkrw, port_warn, pension_data)
     send_email(subject, html)
     print(f"✅ 이메일 발송 완료 (단계: {phase}, 이격도 {dev:+.2f}%)")
 
