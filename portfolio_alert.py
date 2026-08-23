@@ -96,10 +96,10 @@ PENSION_HOLDINGS = {
 
 # IRP: 담보대출 없어 실제 상장 ETF 매매 — 메인계좌처럼 "수량(qty)" 입력 시 자동 시세조회.
 IRP_HOLDINGS = {
-    "QQQ_PEN":   {"ticker": "133690.KS", "qty": 0, "name": "TIGER 미국나스닥100"},
-    "BRK_PEN":   {"ticker": "475350.KS", "qty": 0, "name": "RISE 버크셔포트폴리오TOP10"},
-    "GOLD_PEN":  {"ticker": "0072R0.KS", "qty": 0, "name": "TIGER KRX금현물"},
-    "SCHP_PEN":  {"ticker": "468370.KS", "qty": 0, "name": "KODEX iShares 미국인플레이션국채액티브"},
+    "QQQ_PEN":   {"ticker": "133690.KS", "qty": 63, "name": "TIGER 미국나스닥100"},
+    "BRK_PEN":   {"ticker": "475350.KS", "qty": 523, "name": "RISE 버크셔포트폴리오TOP10"},
+    "GOLD_PEN":  {"ticker": "0072R0.KS", "qty": 588, "name": "TIGER KRX금현물"},
+    "SCHP_PEN":  {"ticker": "468370.KS", "qty": 1074, "name": "KODEX iShares 미국인플레이션국채액티브"},
 }
 # 매도 대상(정리 예정) — 실제 보유수량 반영, 자동 시세조회
 IRP_SELL_TARGETS = {
