@@ -56,9 +56,15 @@ PENSION_TARGETS = {
     # 순수 버크셔 추종 "펀드"(증권자투자신탁) 상품은 확인되지 않아 S&P500 펀드 유지.
     # 2026-08 금/안전자산 비중 조정(금15→20, 안전자산 -5%p): 미국채 신뢰도 우려 반영,
     # 메인계좌와 동일 논리. 백테스트: CAGR 8.3%→8.7%, MDD 동일, 2022년 -12.7%→-12.5%.
+    # 2026-08-19 QQQ_PEN 상품 변경 및 비중조정: 신한미국나스닥100인덱스(주식-파생형)가
+    # 담보대출 제한상품(개별 펀드별 담보산정, 파생형은 대출가능금액 0원)으로 확인되어
+    # 한국투자GoldmanSachs미국테크(주식, 파생형아님 — 담보가능)로 교체.
+    # 다만 액티브·개별종목집중(엔비디아·알파벳 등)형이라 QQQ 근사 백테스트상 MDD 최적점인
+    # 15%로 비중 축소(원래 30%), 나머지는 SP500_PEN으로 흡수(25→40%).
+    # 백테스트(QQQ 근사): 30%일때 CAGR10.8%/MDD-16.7% → 15%일때 CAGR10.2%/MDD-15.5%(최적).
     "연금저축": {
-        "공격": {"QQQ_PEN": 30, "SP500_PEN": 25, "GOLD_PEN": 20, "STC_PEN": 25},
-        "방어": {"QQQ_PEN": 10, "SP500_PEN": 10, "GOLD_PEN": 20, "STC_PEN": 60},
+        "공격": {"QQQ_PEN": 15, "SP500_PEN": 40, "GOLD_PEN": 20, "STC_PEN": 25},
+        "방어": {"QQQ_PEN": 5, "SP500_PEN": 15, "GOLD_PEN": 20, "STC_PEN": 60},
     },
     # IRP는 담보대출이 없어 ETF 매매 가능 — RISE 버크셔포트폴리오TOP10(국내상장 ETF) 사용.
     # 2026-08 금/안전자산 비중 조정: 백테스트 CAGR 10.5%→10.7%, MDD 동일, 2022년 -10.0%→-9.5%.
@@ -68,7 +74,7 @@ PENSION_TARGETS = {
     },
 }
 PENSION_SLOT_NAMES = {
-    "QQQ_PEN":   "나스닥100 상품",
+    "QQQ_PEN":   "나스닥100/테크 상품",
     "SP500_PEN": "S&P500 펀드 (연금저축용, ETF 편입불가)",
     "BRK_PEN":   "RISE 버크셔포트폴리오TOP10(475350, ETF, IRP전용) — BRK.B 27.5%+13F상위10종목",
     "GOLD_PEN":  "금 상품",
@@ -77,10 +83,8 @@ PENSION_SLOT_NAMES = {
 }
 # 연금저축·IRP 보유 현황 — 상품명은 실제 계좌 상품으로 매칭해 직접 채울 것
 PENSION_HOLDINGS = {
-    # 연금저축: 담보대출 계좌라 펀드만 가능. 펀드는 야후파이낸스 시세조회 불가(국내 비상장)
-    # → 좌수 대신 "평가액(value)"을 증권사 앱에서 직접 확인해 수동 입력.
     "연금저축": {
-        "QQQ_PEN":   {"value": 0,          "name": "신한미국나스닥100인덱스(UH)C-pe — 신규매수 필요"},
+        "QQQ_PEN":   {"value": 0,          "name": "한국투자GoldmanSachs미국테크(UH)C-Pe — 신규매수 필요, 담보가능(파생형아님)"},
         "SP500_PEN": {"value": 9_113_568,  "name": "삼성미국S&P500인덱스증권자투자신탁UH_C — 보유중, 비중확대 필요"},
         "GOLD_PEN":  {"value": 19_949_212, "name": "KB스타골드특별자산투자신탁C-Pe"},
         "STC_PEN":   {"value": 5_871_105,  "name": "NH-Amundi USD초단기채권 (비중확대 필요, 삼성/KB단기채는 매도예정)"},
@@ -92,10 +96,10 @@ PENSION_HOLDINGS = {
 
 # IRP: 담보대출 없어 실제 상장 ETF 매매 — 메인계좌처럼 "수량(qty)" 입력 시 자동 시세조회.
 IRP_HOLDINGS = {
-    "QQQ_PEN":   {"ticker": "133690.KS", "qty": 63, "name": "TIGER 미국나스닥100"},
-    "BRK_PEN":   {"ticker": "475350.KS", "qty": 651, "name": "RISE 버크셔포트폴리오TOP10"},
-    "GOLD_PEN":  {"ticker": "0072R0.KS", "qty": 446, "name": "TIGER KRX금현물"},
-    "SCHP_PEN":  {"ticker": "468370.KS", "qty": 1072, "name": "KODEX iShares 미국인플레이션국채액티브"},
+    "QQQ_PEN":   {"ticker": "133690.KS", "qty": 0, "name": "TIGER 미국나스닥100"},
+    "BRK_PEN":   {"ticker": "475350.KS", "qty": 0, "name": "RISE 버크셔포트폴리오TOP10"},
+    "GOLD_PEN":  {"ticker": "0072R0.KS", "qty": 0, "name": "TIGER KRX금현물"},
+    "SCHP_PEN":  {"ticker": "468370.KS", "qty": 0, "name": "KODEX iShares 미국인플레이션국채액티브"},
 }
 # 매도 대상(정리 예정) — 실제 보유수량 반영, 자동 시세조회
 IRP_SELL_TARGETS = {
@@ -169,22 +173,30 @@ BTC_ADDRESS = "bc1q57h8sn3ykge2yh2kn46dq5gsqn92x7pl6uanlg"
 
 def get_market_data():
     """
-    S&P500 종가·200일선·RSI(14)·비상스위치 신호 조회.
+    S&P500 종가·200일선·RSI(14)·비상스위치 신호·레버리지 참고신호 조회.
     비상스위치(2026-08 신설, 26년 백테스트 근거): 방어 상태에서 200일선 회복을 기다리지
     않고 즉시 공격 전환하는 조건. 다음 중 하나 충족 시 발동:
       ① 200일선 -20% 이탈 AND 주봉 RSI 강세 다이버전스 (닷컴형 장기침체 포착: -15%→-20% 조정이 근소하게 우수, CAGR+0.1%p)
       ② 일봉 RSI(14) ≤ 20 (코로나형 급락 포착: RSI≤15 최적화 결과 20이 더 우수, 2020-02 등 13건 포착)
     백테스트: 미적용 CAGR 9.3%/MDD-17.3% → 적용 CAGR 9.9%~9.8%/MDD-17.1%(방어력 손실 없이 수익 개선).
     한계: 26년간 표본이 적어(다이버전스 4건·RSI 13건) 통계적 견고성은 제한적.
-    반환: (종가, 200일선, 이격도%, RSI, 비상신호bool, 비상사유, 오류)
+
+    레버리지 참고신호(2026-08 신설, 포트폴리오 배분과 무관 — 순수 알림):
+      200일선 -20% 이탈 단독(RSI·다이버전스 불문). 4.9% 대출 실행을 검토할 만한 극단적
+      드문 시점 참고용. 36년간 3회(2008-10, 2009-02, 2009-03) 발생, 1년후 전부 플러스
+      (+17.8%~+66.8%, 평균+45.5%). RSI≤20 단독(44건, 1년후평균+14.5%, 마이너스20.5%)이나
+      VIX≥35 단독(RSI≤20 필요, 10건 중 1건 실패)보다 표본은 적지만 100% 성공률.
+      "이벤트성 VIX급등 무시" 조건은 코로나 등 성공사례도 함께 걸러내 근거 부족으로 기각.
+      표본 3건뿐이라 통계적 한계 있음 — 포트폴리오 자동조정 아닌 참고 알림으로만 사용.
+    반환: (종가, 200일선, 이격도%, RSI, 비상신호bool, 비상사유, 레버리지신호bool, 오류)
     """
     try:
         hist = yf.Ticker("^GSPC").history(period="2y")
         if hist is None or hist.empty:
-            return None, None, None, None, False, None, "S&P500 조회 실패(응답 없음)"
+            return None, None, None, None, False, None, False, "S&P500 조회 실패(응답 없음)"
         hist = hist.dropna(subset=["Close"])
         if len(hist) < 200:
-            return None, None, None, None, False, None, f"S&P500 데이터 {len(hist)}행 — 200일 미만"
+            return None, None, None, None, False, None, False, f"S&P500 데이터 {len(hist)}행 — 200일 미만"
 
         close_s = hist["Close"]
         close = float(close_s.iloc[-1])
@@ -198,6 +210,8 @@ def get_market_data():
         rs = gain / loss
         rsi_series = 100 - 100 / (1 + rs)
         rsi = float(rsi_series[-1]) if len(rsi_series) and rsi_series[-1] == rsi_series[-1] else None
+
+        leverage_signal = dev <= -20  # 레버리지 참고신호: 이격도 단독, RSI·다이버전스 불문
 
         emergency, emg_reason = False, None
         # 조건②: 일봉 RSI≤20
@@ -222,9 +236,9 @@ def get_market_data():
                         if rseg[p] == rseg[p] and wc[-1] < seg[p] and rsi_w[-1] > rseg[p]:
                             emergency, emg_reason = True, f"200일선 {dev:+.1f}% 이탈 + 주봉 RSI 강세 다이버전스 — 닷컴형 장기침체 바닥 포착 신호"
 
-        return round(close, 2), round(ma200, 2), round(dev, 2), (round(rsi, 1) if rsi is not None else None), emergency, emg_reason, None
+        return round(close, 2), round(ma200, 2), round(dev, 2), (round(rsi, 1) if rsi is not None else None), emergency, emg_reason, leverage_signal, None
     except Exception as e:
-        return None, None, None, None, False, None, f"S&P500 조회 예외: {type(e).__name__}: {e}"
+        return None, None, None, None, False, None, False, f"S&P500 조회 예외: {type(e).__name__}: {e}"
 
 
 def load_state():
@@ -394,9 +408,12 @@ def get_btc(usdkrw, main_total):
 
 def get_pension_status(account_name, phase):
     """
-    연금저축 계좌의 목표 대비 현황 계산 (펀드 전용, 수동 평가액 입력).
-    펀드는 야후 파이낸스로 조회 불가한 국내 비상장 상품이므로, PENSION_HOLDINGS에
-    기록된 평가액(수동 갱신)을 사용 — 보유현황 캡처를 볼 때마다 값을 직접 갱신.
+    연금저축·IRP 계좌의 목표 대비 현황 계산.
+    두 계좌는 상품 제약이 달라(연금저축=펀드전용·장기채배제, IRP=ETF가능·TIPS단일)
+    PENSION_TARGETS[account_name]로 서로 다른 목표 배분을 사용.
+    실제 시세 조회 없이 PENSION_HOLDINGS에 기록된 평가액(수동 갱신)을 사용 —
+    연금계좌 상품은 야후 파이낸스로 조회 불가한 국내 펀드가 대부분이므로,
+    보유현황 캡처를 볼 때마다 이 값을 직접 갱신하는 방식으로 운용.
     """
     targets = PENSION_TARGETS.get(account_name, {}).get(phase, {})
     hold = PENSION_HOLDINGS.get(account_name, {})
@@ -470,7 +487,7 @@ def get_irp_status(phase):
 
 
 def build_html(now, close, ma200, dev, phase, changed, reason, rows, total, excluded,
-               btc_bal, btc_usd, btc_krw, btc_below5, btc_note, usdkrw, err, pension_data=None):
+               btc_bal, btc_usd, btc_krw, btc_below5, btc_note, usdkrw, err, pension_data=None, leverage_signal=False):
     color = "#16a34a" if phase == "공격" else "#0284c7"
     bg_light = "#f0fdf4" if phase == "공격" else "#eff6ff"
     tgt = TARGETS[phase]
@@ -550,6 +567,15 @@ def build_html(now, close, ma200, dev, phase, changed, reason, rows, total, excl
 
     {"".join(_pension_block(name, phase, d) for name, d in (pension_data or {}).items())}
 
+    {f'''<div style="background:#fef2f2;border:1.5px solid #dc2626;border-radius:8px;padding:16px;margin-bottom:24px">
+      <div style="font-size:12px;color:#dc2626;font-weight:700;margin-bottom:6px">🔴 레버리지 참고신호 발동 (200일선 {dev:+.1f}% 이탈)</div>
+      <div style="color:#7f1d1d;font-size:12px;line-height:1.6">
+        36년간 3회만 발생(2008-10·2009-02·2009-03), 1년후 전부 플러스(+17.8%~+66.8%, 평균+45.5%).
+        4.9% 대출 실행을 검토할 만한 극단적 시점 — 다만 표본 3건뿐이라 통계적 한계 있음.
+        포트폴리오는 자동조정되지 않으며, 순수 참고 알림입니다. 순자산·감당가능 규모를 반드시 함께 고려하세요.
+      </div>
+    </div>''' if leverage_signal else ''}
+
     {f'''<div style="font-size:11px;color:#94a3b8;letter-spacing:0.1em;margin-bottom:10px;font-weight:700">▸ ₿ BTC (별도 관리)</div>
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px;margin-bottom:24px;color:#92400e;font-size:13px;font-weight:600">
       {btc_bal} BTC{f' · ${btc_usd:,.0f}' if btc_usd else ''}{f' · {btc_krw:,.0f}원' if btc_krw else ''}
@@ -612,7 +638,7 @@ def main():
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     print(f"[{now}] 지표 수집 시작...")
 
-    close, ma200, dev, rsi, emergency, emg_reason, err = get_market_data()
+    close, ma200, dev, rsi, emergency, emg_reason, leverage_signal, err = get_market_data()
     if err:
         print(f"[오류] {err}")
         send_email(f"[Portfolio] 데이터 오류 — {now}",
@@ -643,9 +669,11 @@ def main():
         print(f"[경고] {irp_warn}")
 
     subject = f"[Portfolio v4.0] {'🔀 ' + prev_phase + '→' + phase if changed else phase} — {now}"
+    if leverage_signal:
+        subject = "🔴 " + subject + " [레버리지 참고신호]"
     html = build_html(now, close, ma200, dev, phase, changed, reason,
                       rows, total, excluded, btc_bal, btc_usd, btc_krw, btc_below5, btc_note,
-                      usdkrw, port_warn, pension_data)
+                      usdkrw, port_warn, pension_data, leverage_signal)
     send_email(subject, html)
     print(f"✅ 이메일 발송 완료 (단계: {phase}, 이격도 {dev:+.2f}%)")
 
