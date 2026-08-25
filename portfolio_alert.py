@@ -32,7 +32,7 @@ from datetime import datetime
 
 EMAIL_FROM = "ossang614@gmail.com"
 EMAIL_TO   = "ossang614@gmail.com"
-EMAIL_PASS = "fuvw zbun ydje supp"
+EMAIL_PASS = "kizc werz ffzh tbhz"
 
 # ============================================================
 # 단계별 목표 비중 — 계좌별 2개 세트
@@ -540,8 +540,8 @@ def build_html(now, close, ma200, dev, phase, changed, reason, rows, total, excl
 
     <!-- 메인계좌 헤더 -->
     <div style="background:{bg_light};border:1.5px solid {color};border-radius:10px;padding:20px;margin-bottom:24px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-        <span style="background:{color};color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px">메인계좌</span>
+      <div style="margin-bottom:4px">
+        <span style="background:{color};color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;margin-right:10px">메인계좌</span>
         <span style="font-size:11px;color:#64748b;letter-spacing:0.1em">현재 단계</span>
       </div>
       <div style="font-size:28px;font-weight:800;color:{color};margin:4px 0">{phase}</div>
@@ -628,8 +628,8 @@ def _pension_block(account_name, phase, data):
           <td style="padding:10px 14px;text-align:right;font-family:monospace;font-weight:700;color:{'#dc2626' if r['over'] else '#94a3b8'}">{r['diff']:+.1f}%p</td>
         </tr>""" for i, r in enumerate(rows))
     return f"""
-    <div style="display:flex;align-items:center;gap:8px;margin:28px 0 10px">
-      <span style="background:{acc_color};color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px">{account_name}</span>
+    <div style="margin:28px 0 10px">
+      <span style="background:{acc_color};color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;margin-right:10px">{account_name}</span>
       <span style="font-size:11px;color:#94a3b8;letter-spacing:0.1em;font-weight:700">▸ {phase}</span>
     </div>
     <table style="width:100%;border-collapse:collapse;margin-bottom:8px;border-radius:8px;overflow:hidden;border:1.5px solid {acc_color}33">
