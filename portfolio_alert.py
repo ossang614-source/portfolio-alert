@@ -42,8 +42,14 @@ EMAIL_PASS = "fuvw zbun ydje supp"
 #   전환 신호(200일선)는 세 계좌 모두 동일하게 적용
 # ============================================================
 TARGETS = {
+    # 2026-08-19 방어배분 개정: 백테스트 결과 방어 시 주식 0%(금30/SCHP70)가
+    # 현행(주식30% 유지) 대비 CAGR·MDD·2022년 성과 전부 개선되는 순수 이득으로 확인.
+    # 26년(5자산): CAGR 10.0%→11.0%, MDD -17.2%→-14.5%. 30년(4자산근사): CAGR 9.9%→10.5%,
+    # MDD -17.3%→-15.1%. 기존 "완전청산 손해" 결론은 BRK.B·비상스위치·최소유예 도입 이전
+    # 초기 설계 기준이었음 — 누적 개선으로 결론이 뒤집힘. 공격 배분(60/40)은 8:2/7:3/6:4
+    # 비교 검증 결과 위험대비효율 최적점이라 현행 유지.
     "공격": {"133690.KS": 25, "BRK-B": 25, "102110.KS": 10, "0072R0.KS": 20, "SCHP": 20},
-    "방어": {"133690.KS": 10, "BRK-B": 10, "102110.KS": 10, "0072R0.KS": 20, "SCHP": 50},
+    "방어": {"133690.KS": 0,  "BRK-B": 0,  "102110.KS": 0,  "0072R0.KS": 30, "SCHP": 70},
 }
 
 # 연금저축·IRP는 계좌 제약이 서로 달라 배분을 분리:
@@ -62,9 +68,11 @@ PENSION_TARGETS = {
     # 다만 액티브·개별종목집중(엔비디아·알파벳 등)형이라 QQQ 근사 백테스트상 MDD 최적점인
     # 15%로 비중 축소(원래 30%), 나머지는 SP500_PEN으로 흡수(25→40%).
     # 백테스트(QQQ 근사): 30%일때 CAGR10.8%/MDD-16.7% → 15%일때 CAGR10.2%/MDD-15.5%(최적).
+    # 2026-08-19 방어배분 개정: 방어 시 주식 0%(금30/STC70)가 현행(주식20% 유지) 대비
+    # CAGR·MDD·2022년 성과 전부 개선되는 순수 이득으로 확인(CAGR 8.4→9.0%, MDD -19.7→-14.0%).
     "연금저축": {
         "공격": {"QQQ_PEN": 15, "SP500_PEN": 40, "GOLD_PEN": 20, "STC_PEN": 25},
-        "방어": {"QQQ_PEN": 5, "SP500_PEN": 15, "GOLD_PEN": 20, "STC_PEN": 60},
+        "방어": {"QQQ_PEN": 0, "SP500_PEN": 0, "GOLD_PEN": 30, "STC_PEN": 70},
     },
     # IRP는 담보대출이 없어 ETF 매매 가능 — RISE 버크셔포트폴리오TOP10(국내상장 ETF) 사용.
     # 2026-08 금/안전자산 비중 조정: 백테스트 CAGR 10.5%→10.7%, MDD 동일, 2022년 -10.0%→-9.5%.
@@ -75,7 +83,9 @@ PENSION_TARGETS = {
     # MDD-16.6→-18.4%, 2022년 -10.0→-9.3%로 오히려 개선). 나스닥100·균등분배는 MDD 더 악화되어 기각.
     "IRP": {
         "공격": {"QQQ_PEN": 30, "BRK_PEN": 30, "GOLD_PEN": 10, "SCHP_PEN": 30},
-        "방어": {"QQQ_PEN": 10, "BRK_PEN": 10, "GOLD_PEN": 20, "SCHP_PEN": 60},
+        # 2026-08-19 방어배분 개정: 방어 시 주식 0%(금30/TIPS70)가 순수 이득으로 확인
+        # (CAGR 10.6→11.2%, MDD -16.0→-14.5%). 위험자산 0%는 70%상한 규정과 무관(상한 미만이라 안전).
+        "방어": {"QQQ_PEN": 0, "BRK_PEN": 0, "GOLD_PEN": 30, "SCHP_PEN": 70},
     },
 }
 PENSION_SLOT_NAMES = {
@@ -101,10 +111,10 @@ PENSION_HOLDINGS = {
 
 # IRP: 담보대출 없어 실제 상장 ETF 매매 — 메인계좌처럼 "수량(qty)" 입력 시 자동 시세조회.
 IRP_HOLDINGS = {
-    "QQQ_PEN":   {"ticker": "133690.KS", "qty": 63, "name": "TIGER 미국나스닥100"},
-    "BRK_PEN":   {"ticker": "475350.KS", "qty": 523, "name": "RISE 버크셔포트폴리오TOP10"},
-    "GOLD_PEN":  {"ticker": "0072R0.KS", "qty": 588, "name": "TIGER KRX금현물"},
-    "SCHP_PEN":  {"ticker": "468370.KS", "qty": 1074, "name": "KODEX iShares 미국인플레이션국채액티브"},
+    "QQQ_PEN":   {"ticker": "133690.KS", "qty": 0, "name": "TIGER 미국나스닥100"},
+    "BRK_PEN":   {"ticker": "475350.KS", "qty": 0, "name": "RISE 버크셔포트폴리오TOP10"},
+    "GOLD_PEN":  {"ticker": "0072R0.KS", "qty": 0, "name": "TIGER KRX금현물"},
+    "SCHP_PEN":  {"ticker": "468370.KS", "qty": 0, "name": "KODEX iShares 미국인플레이션국채액티브"},
 }
 # 매도 대상(정리 예정) — 실제 보유수량 반영, 자동 시세조회
 IRP_SELL_TARGETS = {
@@ -268,7 +278,9 @@ def save_state(phase, since, since_attack=None):
 def decide_phase(close, ma200, prev_phase, since, since_attack=None, emergency=False, emg_reason=None):
     """
     2단계 전환 판정 (2026-08 개정: 최소유예 + 비상 선제 공격 스위치).
-      공격 → 방어: 종가 < 200일선 × 0.97 AND 공격 진입 후 10거래일(약 14일) 경과
+      공격 → 방어: 종가 < 200일선 × 0.97 AND 공격 진입 후 21일 경과
+        — 2026-08-19 재검증(방어=주식0% 조건 반영): 14일보다 21일이 CAGR 0.2%p 더 우수(MDD 동일).
+          사용자 직관("한번 전환했으면 3주는 유지")과 백테스트 결과가 일치해 21일로 조정.
         — 2011-11-08(공격 복귀)→11-09(방어 재전환) 같은 하루짜리 헛발동 방지 목적.
           26년 백테스트: 헛발동 제거, 성과 동일(CAGR 9.2→9.3%, MDD -17.3% 그대로).
           버퍼 확대(-4~7%)는 MDD가 오히려 악화되어 기각, 최소유예만 채택.
@@ -288,9 +300,9 @@ def decide_phase(close, ma200, prev_phase, since, since_attack=None, emergency=F
                     att_days = (today - datetime.strptime(since_attack, "%Y-%m-%d").date()).days
                 except (ValueError, TypeError):
                     att_days = None
-            if att_days is None or att_days >= 14:
+            if att_days is None or att_days >= 21:
                 return "방어", True, f"S&P500이 200일선 -3%({ma200*DEFENSE_TRIGGER:,.0f}) 아래로 이탈 + 최소유예 충족({att_days}일) — 방어 전환"
-            return "공격", False, f"200일선 -3% 이탈했으나 최소유예 미충족({att_days}/14일) — 헛발동 방지"
+            return "공격", False, f"200일선 -3% 이탈했으나 최소유예 미충족({att_days}/21일) — 헛발동 방지"
         return "공격", False, None
     # 방어 상태
     if emergency:
@@ -657,7 +669,7 @@ def main():
         if phase == "방어":
             since = today_str          # 방어 진입일 갱신(다음 90일 카운트 시작)
         elif phase == "공격":
-            since_attack = today_str   # 공격 진입일 갱신(다음 14일 카운트 시작)
+            since_attack = today_str   # 공격 진입일 갱신(다음 21일 카운트 시작)
         print(f"[전환] {prev_phase} → {phase}: {reason}")
     save_state(phase, since, since_attack)
 
