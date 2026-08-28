@@ -48,14 +48,26 @@ TARGETS = {
     # MDD -17.3%→-15.1%. 기존 "완전청산 손해" 결론은 BRK.B·비상스위치·최소유예 도입 이전
     # 초기 설계 기준이었음 — 누적 개선으로 결론이 뒤집힘. 공격 배분(60/40)은 8:2/7:3/6:4
     # 비교 검증 결과 위험대비효율 최적점이라 현행 유지.
-    "공격": {"133690.KS": 25, "BRK-B": 25, "102110.KS": 10, "0072R0.KS": 20, "SCHP": 20},
-    "방어": {"133690.KS": 0,  "BRK-B": 0,  "102110.KS": 0,  "0072R0.KS": 30, "SCHP": 70},
+    # 2026-08-25 금:SCHP 비율 재조정: 미국 장기채 금리 지속상승(재정적자 GDP6%, 부채40조달러
+    # 돌파) 구조적 압박 반영. 공격(안전자산40% 내) 금20→30/SCHP20→10: CAGR11.3→11.6%,
+    # MDD-14.2→-14.4%(거의동일), 2022년-5.4→-4.8%(개선). 방어(100%) 금30→40/SCHP70→60:
+    # CAGR11.2→11.3%, MDD-14.5→-14.2%(개선, U자형 최저점), 2022년-5.5→-5.4%.
+    # 방어는 금50%부터 MDD 급격 악화(금 자체 변동성) 확인되어 40%가 상한.
+    # 2026-08-25 추가 정정: 공격 배분 내 안전자산(40%)의 금:SCHP 비율 재검증 결과,
+    # 30:10보다 40:0(SCHP 완전제거)이 CAGR+0.4%p 개선/MDD -0.2%p 소폭악화로 확인.
+    # 26년 데이터상 SCHP 10%p 유지 근거 약함 — 사용자 확정으로 전량 금으로 전환.
+    # (방어는 여전히 40:60 유지 — 그쪽은 50%부터 MDD 급격 악화하는 명확한 U자형 최적점 존재)
+    # 2026-08-25 재조정: STC를 실제 파트너로 확정 후 재검증 결과, MDD 기준으로는
+    # 30:10이 40:0보다 우수(-13.7% vs -14.7%), CAGR·2022년은 40:0이 근소 우위.
+    # MDD 우선 원칙에 따라 30:10으로 최종 확정.
+    "공격": {"133690.KS": 25, "BRK-B": 25, "102110.KS": 10, "0072R0.KS": 30, "STC": 10},
+    "방어": {"133690.KS": 0,  "BRK-B": 0,  "102110.KS": 0,  "0072R0.KS": 40, "STC": 60},
 }
 
 # 연금저축·IRP는 계좌 제약이 서로 달라 배분을 분리:
 #   연금저축: 담보대출 계좌라 펀드만 가능. 장기채는 재정불신 리스크 및 회복지연기
 #             취약성(24년 백테스트로 확인)이 커서 배제 — 초단기채 단일 구성.
-#   IRP: 담보대출 없어 ETF 가능. 실제 물가연동채(TIPS) ETF를 직접 매수 가능해 SCHP 단일 구성.
+#   IRP: 담보대출 없어 ETF 가능. 2026-08-25 TIPS→RISE 미국달러SOFR금리액티브(455960)로 교체(금리급등형 방어력 우수, 환노출형).
 #   둘 다 코스피 제외(연금소득세 부과로 비과세 실익 없음), 위험자산 70% 상한(IRP 법정 기준) 준수.
 PENSION_TARGETS = {
     # 연금저축은 담보대출 계좌라 펀드만 가능 — RISE 버크셔TOP10은 ETF라 편입 불가.
@@ -70,9 +82,14 @@ PENSION_TARGETS = {
     # 백테스트(QQQ 근사): 30%일때 CAGR10.8%/MDD-16.7% → 15%일때 CAGR10.2%/MDD-15.5%(최적).
     # 2026-08-19 방어배분 개정: 방어 시 주식 0%(금30/STC70)가 현행(주식20% 유지) 대비
     # CAGR·MDD·2022년 성과 전부 개선되는 순수 이득으로 확인(CAGR 8.4→9.0%, MDD -19.7→-14.0%).
+    # 2026-08-25 금:안전자산 비율 재조정: 미국 장기채 금리 지속상승 구조적 압박 반영.
+    # (메인계좌와 동일 근거로 조정. 연금저축은 IRP 70%상한 규정과 무관해 그대로 적용 가능.)
     "연금저축": {
+        # 2026-08-25 재검증: 45:0(전량금)까지 검토했으나 STC(초단기채)는 SCHP보다 원래
+        # 안정적인 자산이라 대가가 더 큼(CAGR+0.8%p vs MDD-0.6%p, 메인계좌보다 트레이드오프 큼).
+        # 사용자 확정으로 원래 비율(20:25) 유지 — 메인계좌와 달리 여기선 안전자산 분산 유지.
         "공격": {"QQQ_PEN": 15, "SP500_PEN": 40, "GOLD_PEN": 20, "STC_PEN": 25},
-        "방어": {"QQQ_PEN": 0, "SP500_PEN": 0, "GOLD_PEN": 30, "STC_PEN": 70},
+        "방어": {"QQQ_PEN": 0, "SP500_PEN": 0, "GOLD_PEN": 40, "STC_PEN": 60},
     },
     # IRP는 담보대출이 없어 ETF 매매 가능 — RISE 버크셔포트폴리오TOP10(국내상장 ETF) 사용.
     # 2026-08 금/안전자산 비중 조정: 백테스트 CAGR 10.5%→10.7%, MDD 동일, 2022년 -10.0%→-9.5%.
@@ -82,10 +99,11 @@ PENSION_TARGETS = {
     # 백테스트(금10%로 축소, 여유10%p 배분처): BRK로 보낼때 최선(CAGR11.5→11.8%,
     # MDD-16.6→-18.4%, 2022년 -10.0→-9.3%로 오히려 개선). 나스닥100·균등분배는 MDD 더 악화되어 기각.
     "IRP": {
+        # 공격 배분은 위험자산(QQQ+BRK+GOLD) 이미 70% 상한에 걸려있어 금 추가 확대 불가
+        # (GOLD 늘리려면 QQQ·BRK를 줄여야 하나, 규정상 SCHP도 최소 30% 유지 필요해 여력 없음).
         "공격": {"QQQ_PEN": 30, "BRK_PEN": 30, "GOLD_PEN": 10, "SCHP_PEN": 30},
-        # 2026-08-19 방어배분 개정: 방어 시 주식 0%(금30/TIPS70)가 순수 이득으로 확인
-        # (CAGR 10.6→11.2%, MDD -16.0→-14.5%). 위험자산 0%는 70%상한 규정과 무관(상한 미만이라 안전).
-        "방어": {"QQQ_PEN": 0, "BRK_PEN": 0, "GOLD_PEN": 30, "SCHP_PEN": 70},
+        # 방어(주식0%)는 70%상한과 무관 — 메인계좌와 동일 근거로 금30→40 조정.
+        "방어": {"QQQ_PEN": 0, "BRK_PEN": 0, "GOLD_PEN": 40, "SCHP_PEN": 60},
     },
 }
 PENSION_SLOT_NAMES = {
@@ -93,7 +111,7 @@ PENSION_SLOT_NAMES = {
     "SP500_PEN": "S&P500 펀드 (연금저축용, ETF 편입불가)",
     "BRK_PEN":   "RISE 버크셔포트폴리오TOP10(475350, ETF, IRP전용) — BRK.B 27.5%+13F상위10종목",
     "GOLD_PEN":  "금 상품",
-    "SCHP_PEN":  "물가연동채(TIPS) ETF",
+    "SCHP_PEN":  "초단기채(SOFR금리) ETF",
     "STC_PEN":   "초단기채 펀드",
 }
 # 연금저축·IRP 보유 현황 — 상품명은 실제 계좌 상품으로 매칭해 직접 채울 것
@@ -114,7 +132,9 @@ IRP_HOLDINGS = {
     "QQQ_PEN":   {"ticker": "133690.KS", "qty": 0, "name": "TIGER 미국나스닥100"},
     "BRK_PEN":   {"ticker": "475350.KS", "qty": 0, "name": "RISE 버크셔포트폴리오TOP10"},
     "GOLD_PEN":  {"ticker": "0072R0.KS", "qty": 0, "name": "TIGER KRX금현물"},
-    "SCHP_PEN":  {"ticker": "468370.KS", "qty": 0, "name": "KODEX iShares 미국인플레이션국채액티브"},
+    # 2026-08-25 실제 매수 상품 확정: RISE 미국달러SOFR금리액티브(455960) — 메인계좌와 동일 상품,
+    # 개인연금·퇴직연금 둘 다 가능 확인됨. 환노출형(의도적 달러 익스포저 유지).
+    "SCHP_PEN":  {"ticker": "455960.KS", "qty": 0, "name": "RISE 미국달러SOFR금리액티브(합성)"},
 }
 # 매도 대상(정리 예정) — 실제 보유수량 반영, 자동 시세조회
 IRP_SELL_TARGETS = {
@@ -136,7 +156,7 @@ SLOT_NAMES = {
     "BRK-B":     "버크셔 해서웨이 B주 (해외주식계좌)",
     "102110.KS": "TIGER 200 (코스피)",
     "0072R0.KS": "금 그룹 (TIGER KRX금현물+GLD)",
-    "SCHP":      "물가연동채 그룹",
+    "STC":       "초단기채 그룹",
 }
 # 자산군: (분류명, 색상) — 성격이 같은 자산끼리 묶어 위험 구조를 한눈에 보이게 함
 SLOT_CLASS = {
@@ -145,11 +165,11 @@ SLOT_CLASS = {
     "BRK-B":     ("주식 · 미국 대형주(개별주)", "#3b82f6"),
     "102110.KS": ("주식 · 국내",        "#a78bfa"),
     "0072R0.KS": ("실물자산 · 금",      "#eab308"),
-    "SCHP":      ("안전자산 · 채권",    "#f472b6"),
+    "STC":       ("안전자산 · 초단기채", "#f472b6"),
 }
 # 위험/안전 구분 (요약 표시용)
 RISK_SLOTS = ("133690.KS", "360750.KS", "102110.KS", "BRK-B")
-SAFE_SLOTS = ("0072R0.KS", "SCHP")
+SAFE_SLOTS = ("0072R0.KS", "STC")
 
 # 전환 규칙
 DEFENSE_TRIGGER = 0.97   # 공격→방어: S&P500 < 200일선 × 0.97
@@ -165,8 +185,8 @@ HOLDINGS = {
     "102110.KS": {"qty": 15,  "type": "kr", "name": "TIGER 200"},
     "0072R0.KS": {"qty": 0,   "type": "kr", "name": "TIGER KRX금현물"},
     # GLD(미국상장) — 2026-08 매도 완료. 매도대금은 TIGER KRX금현물 등 v4.0 재배분에 사용.
-    "GLD":       {"qty": 16,   "type": "us", "name": "GLD (해외주식계좌, 금 그룹 일부 — 비과세공제 활용, 매수량 미정)"},
-    "SCHP":      {"qty": 0,   "type": "us", "name": "SCHP"},
+    "GLD":       {"qty": 0,   "type": "us", "name": "GLD (2026-08-25 전량매도 예정 — 금현물계좌/0072R0.KS로 일원화)"},
+    "455960.KS": {"qty": 0,   "type": "kr", "name": "RISE 미국달러SOFR금리액티브(합성) — 신규매수 예정, 환노출(달러익스포저 의도적 유지)"},
     "468370.KS": {"qty": 917, "type": "kr", "name": "KODEX 미국인플레이션국채액티브"},
     "329750.KS": {"qty": 0,  "type": "kr", "name": "TIGER 미국달러단기채권액티브"},
     # 정리 대상 — 2026-08 전량 매도 완료: 4.9% 대출 2,872만원 상환 +
@@ -175,8 +195,13 @@ HOLDINGS = {
     "SCHD":      {"qty": 0, "type": "us", "name": "SCHD (매도완료)"},
     "VOO":       {"qty": 0,  "type": "us", "name": "VOO (매도완료)"},
 }
-# SCHP 슬롯은 국내 대체 ETF와 합산 관리
-SCHP_GROUP = ("SCHP", "468370.KS", "329750.KS")
+# 2026-08-25 SCHP→STC(초단기채) 전환: 2022년 금리급등형 위기 방어구간 실측상
+# SCHP -11.6% vs STC -3.9%(근사)로 STC가 확실히 우수해 교체. 468370.KS(TIPS류)는
+# 더 이상 이 슬롯 목적에 안 맞아 제외, 원래 섞여있던 329750.KS(단기채)만 유지+SHV 추가.
+# 2026-08-25 실제 매수 상품 확정: RISE 미국달러SOFR금리액티브(455960, 개인연금·퇴직연금 가능)
+# 환헤지 안 된 상품(달러 익스포저 의도적 유지 — 달러패권 붕괴 가능성 낮다고 판단).
+# 기존 329750.KS(TIGER 미국달러단기채권액티브)는 대체 옵션으로 그룹에 유지.
+STC_GROUP = ("455960.KS", "329750.KS")
 # 나스닥100 슬롯 그룹 — TIGER 미국나스닥100(국내) + QQQ(해외, 연 250만원 비과세 공제 활용 목적)
 # 고정 비율 없이 보유한 만큼 합산 (BRK.B·금 그룹과 같은 취지)
 NASDAQ_GROUP = ("133690.KS", "QQQ")
@@ -254,6 +279,43 @@ def get_market_data():
         return round(close, 2), round(ma200, 2), round(dev, 2), (round(rsi, 1) if rsi is not None else None), emergency, emg_reason, leverage_signal, None
     except Exception as e:
         return None, None, None, None, False, None, False, f"S&P500 조회 예외: {type(e).__name__}: {e}"
+
+
+def get_tlt_signal():
+    """
+    장기채(TLT) 진입 참고신호 — 순수 알림용, 자동 배분 변경 없음.
+    조건: 미국 10년물 금리가 1년 신고점을 찍은 뒤 고점 대비 15bp 이상 하락 확인.
+    26년 백테스트(2003~2025, 31건): 6개월후 평균+3.2%, 승률71%, 최악-21.6%(2022년
+    인상사이클 중간의 가짜신호 3연속 포함) — 주식 비상스위치(승률100%)보다 신뢰도 낮음.
+    자동화하지 않고, 발동 시 연준 성명·CPI 추세 등 정성적 확인 후 소액(5~10%) 진입 검토용.
+    반환: (신호bool, 현재금리, 최근1년고점, 사유)
+    """
+    try:
+        h = yf.Ticker("^TNX").history(period="2y")
+        if h is None or h.empty or len(h) < 252:
+            return False, None, None, None
+        h = h.dropna(subset=["Close"])
+        tnx = h["Close"]
+        high252 = tnx.rolling(252).max()
+        cur = float(tnx.iloc[-1])
+        peak = float(high252.iloc[-1])
+        # 최근 252거래일 내 1년신고점 이후 15bp 이상 하락한 첫 시점인지 확인
+        recent = tnx.iloc[-40:]  # 최근 약 2개월 내에서 신고점->하락 패턴 탐색
+        recent_high = recent.rolling(252, min_periods=1).max()
+        signal = False; reason = None
+        if cur <= peak - 0.15:
+            # 신고점 근처(3거래일 이내)였는지 확인해 "막 하락 시작"인 경우만 신호
+            days_since_peak = None
+            for i in range(len(tnx)-1, max(len(tnx)-15, 0), -1):
+                if tnx.iloc[i] >= peak - 0.02:
+                    days_since_peak = len(tnx)-1-i
+                    break
+            if days_since_peak is not None and days_since_peak <= 10:
+                signal = True
+                reason = f"10년물 금리 1년 신고점({peak:.2f}%) 대비 {(peak-cur)*100:.0f}bp 하락 확인 — 장기채(TLT) 진입 검토 참고신호"
+        return signal, round(cur, 2), round(peak, 2), reason
+    except Exception:
+        return False, None, None, None
 
 
 def load_state():
@@ -360,11 +422,11 @@ def get_portfolio(phase, usdkrw, prices):
             continue
         v = p * info["qty"]
         values[tk] = v * usdkrw if info["type"] == "us" else v
-    # SCHP·금 슬롯은 그룹 합산
+    # STC·금 슬롯은 그룹 합산
     slot_values = {}
     for slot in targets:
-        if slot == "SCHP":
-            slot_values[slot] = sum(values.get(t, 0.0) for t in SCHP_GROUP)
+        if slot == "STC":
+            slot_values[slot] = sum(values.get(t, 0.0) for t in STC_GROUP)
         elif slot == "0072R0.KS":
             slot_values[slot] = sum(values.get(t, 0.0) for t in GOLD_GROUP)
         elif slot == "133690.KS":
@@ -375,7 +437,7 @@ def get_portfolio(phase, usdkrw, prices):
     total = sum(slot_values.values()) + excluded
     if total <= 0:
         return None, 0, excluded, "보유 자산 평가액 0 — 가격 조회 실패 추정"
-    GROUP_MAP = {"SCHP": SCHP_GROUP, "0072R0.KS": GOLD_GROUP, "133690.KS": NASDAQ_GROUP}
+    GROUP_MAP = {"STC": STC_GROUP, "0072R0.KS": GOLD_GROUP, "133690.KS": NASDAQ_GROUP}
     rows = []
     for slot, tgt in targets.items():
         cur_pct = slot_values[slot] / total * 100
@@ -504,7 +566,8 @@ def get_irp_status(phase):
 
 
 def build_html(now, close, ma200, dev, phase, changed, reason, rows, total, excluded,
-               btc_bal, btc_usd, btc_krw, btc_below5, btc_note, usdkrw, err, pension_data=None, leverage_signal=False):
+               btc_bal, btc_usd, btc_krw, btc_below5, btc_note, usdkrw, err, pension_data=None,
+               leverage_signal=False, tlt_signal=False, tlt_cur=None, tlt_peak=None, tlt_reason=None):
     color = "#16a34a" if phase == "공격" else "#0284c7"
     bg_light = "#f0fdf4" if phase == "공격" else "#eff6ff"
     tgt = TARGETS[phase]
@@ -592,6 +655,16 @@ def build_html(now, close, ma200, dev, phase, changed, reason, rows, total, excl
         포트폴리오는 자동조정되지 않으며, 순수 참고 알림입니다. 순자산·감당가능 규모를 반드시 함께 고려하세요.
       </div>
     </div>''' if leverage_signal else ''}
+
+    {f'''<div style="background:#eff6ff;border:1.5px solid #3b82f6;border-radius:8px;padding:16px;margin-bottom:24px">
+      <div style="font-size:12px;color:#1d4ed8;font-weight:700;margin-bottom:6px">🔵 장기채(TLT) 진입 참고신호 발동</div>
+      <div style="color:#1e3a8a;font-size:12px;line-height:1.6">
+        {tlt_reason}<br>
+        26년 백테스트(31건): 6개월후 평균+3.2%, 승률71%, 최악-21.6%(2022년 인상사이클 중
+        가짜신호 3연속 포함) — 주식 비상스위치(승률100%)보다 신뢰도 낮음. 자동 배분 변경
+        없음. 연준 성명·CPI 추세 등 정성적 확인 후 소액(5~10%) 진입 검토 권장.
+      </div>
+    </div>''' if tlt_signal else ''}
 
     {f'''<div style="font-size:11px;color:#94a3b8;letter-spacing:0.1em;margin-bottom:10px;font-weight:700">▸ ₿ BTC (별도 관리)</div>
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px;margin-bottom:24px;color:#92400e;font-size:13px;font-weight:600">
@@ -685,12 +758,17 @@ def main():
     if irp_warn:
         print(f"[경고] {irp_warn}")
 
+    tlt_signal, tlt_cur, tlt_peak, tlt_reason = get_tlt_signal()
+
     subject = f"[Portfolio v4.0] {'🔀 ' + prev_phase + '→' + phase if changed else phase} — {now}"
     if leverage_signal:
         subject = "🔴 " + subject + " [레버리지 참고신호]"
+    if tlt_signal:
+        subject = "🔵 " + subject + " [장기채 참고신호]"
     html = build_html(now, close, ma200, dev, phase, changed, reason,
                       rows, total, excluded, btc_bal, btc_usd, btc_krw, btc_below5, btc_note,
-                      usdkrw, port_warn, pension_data, leverage_signal)
+                      usdkrw, port_warn, pension_data, leverage_signal,
+                      tlt_signal, tlt_cur, tlt_peak, tlt_reason)
     send_email(subject, html)
     print(f"✅ 이메일 발송 완료 (단계: {phase}, 이격도 {dev:+.2f}%)")
 
