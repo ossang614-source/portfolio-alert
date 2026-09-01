@@ -85,10 +85,8 @@ PENSION_TARGETS = {
     # 2026-08-25 금:안전자산 비율 재조정: 미국 장기채 금리 지속상승 구조적 압박 반영.
     # (메인계좌와 동일 근거로 조정. 연금저축은 IRP 70%상한 규정과 무관해 그대로 적용 가능.)
     "연금저축": {
-        # 2026-08-25 재검증: 45:0(전량금)까지 검토했으나 STC(초단기채)는 SCHP보다 원래
-        # 안정적인 자산이라 대가가 더 큼(CAGR+0.8%p vs MDD-0.6%p, 메인계좌보다 트레이드오프 큼).
-        # 사용자 확정으로 원래 비율(20:25) 유지 — 메인계좌와 달리 여기선 안전자산 분산 유지.
-        "공격": {"QQQ_PEN": 15, "SP500_PEN": 40, "GOLD_PEN": 20, "STC_PEN": 25},
+        # 2026-08-25 재조정: 15:45가 어색해 20:40으로 정리(금30/STC10은 유지).
+        "공격": {"QQQ_PEN": 20, "SP500_PEN": 40, "GOLD_PEN": 30, "STC_PEN": 10},
         "방어": {"QQQ_PEN": 0, "SP500_PEN": 0, "GOLD_PEN": 40, "STC_PEN": 60},
     },
     # IRP는 담보대출이 없어 ETF 매매 가능 — RISE 버크셔포트폴리오TOP10(국내상장 ETF) 사용.
@@ -111,30 +109,33 @@ PENSION_SLOT_NAMES = {
     "SP500_PEN": "S&P500 펀드 (연금저축용, ETF 편입불가)",
     "BRK_PEN":   "RISE 버크셔포트폴리오TOP10(475350, ETF, IRP전용) — BRK.B 27.5%+13F상위10종목",
     "GOLD_PEN":  "금 상품",
-    "SCHP_PEN":  "초단기채(SOFR금리) ETF",
+    "SCHP_PEN":  "초단기채 ETF (실물복제, IRP는 합성상품 매매불가)",
     "STC_PEN":   "초단기채 펀드",
 }
 # 연금저축·IRP 보유 현황 — 상품명은 실제 계좌 상품으로 매칭해 직접 채울 것
 PENSION_HOLDINGS = {
     "연금저축": {
-        "QQQ_PEN":   {"value": 0,          "name": "한국투자GoldmanSachs미국테크(UH)C-Pe — 신규매수 필요, 담보가능(파생형아님)"},
-        "SP500_PEN": {"value": 9_113_568,  "name": "삼성미국S&P500인덱스증권자투자신탁UH_C — 보유중, 비중확대 필요"},
-        "GOLD_PEN":  {"value": 19_949_212, "name": "KB스타골드특별자산투자신탁C-Pe"},
-        "STC_PEN":   {"value": 5_871_105,  "name": "NH-Amundi USD초단기채권 (비중확대 필요, 삼성/KB단기채는 매도예정)"},
-        "매도대상_기타": {"value": 12_292_321+11_044_217+16_922_063,
+        "QQQ_PEN":   {"value": 7692037,          "name": "한국투자GoldmanSachs미국테크(UH)C-Pe — 신규매수 필요, 담보가능(파생형아님)"},
+        "SP500_PEN": {"value": 31246398,  "name": "삼성미국S&P500인덱스증권자투자신탁UH_C — 보유중, 비중확대 필요"},
+        "GOLD_PEN":  {"value": 17303109, "name": "KB스타골드특별자산투자신탁C-Pe"},
+        "STC_PEN":   {"value": 10329425,  "name": "NH-Amundi USD초단기채권 (비중확대 필요, 삼성/KB단기채는 매도예정)"},
+        "매도대상_기타": {"value": 2066468+7692037,
                        "name": "삼성달러표시단기채권+KB글로벌단기채(→NH-Amundi로 통합)+NH-Amundi필승코리아(코스피, 매도)"},
-        "현금": {"value": 2_319_351, "name": "현금"},
+        "현금": {"value": 0, "name": "현금"},
     },
 }
 
 # IRP: 담보대출 없어 실제 상장 ETF 매매 — 메인계좌처럼 "수량(qty)" 입력 시 자동 시세조회.
 IRP_HOLDINGS = {
-    "QQQ_PEN":   {"ticker": "133690.KS", "qty": 0, "name": "TIGER 미국나스닥100"},
-    "BRK_PEN":   {"ticker": "475350.KS", "qty": 0, "name": "RISE 버크셔포트폴리오TOP10"},
-    "GOLD_PEN":  {"ticker": "0072R0.KS", "qty": 0, "name": "TIGER KRX금현물"},
+    "QQQ_PEN":   {"ticker": "133690.KS", "qty": 63, "name": "TIGER 미국나스닥100"},
+    "BRK_PEN":   {"ticker": "475350.KS", "qty": 797, "name": "RISE 버크셔포트폴리오TOP10"},
+    "GOLD_PEN":  {"ticker": "0072R0.KS", "qty": 299, "name": "TIGER KRX금현물"},
     # 2026-08-25 실제 매수 상품 확정: RISE 미국달러SOFR금리액티브(455960) — 메인계좌와 동일 상품,
     # 개인연금·퇴직연금 둘 다 가능 확인됨. 환노출형(의도적 달러 익스포저 유지).
-    "SCHP_PEN":  {"ticker": "455960.KS", "qty": 0, "name": "RISE 미국달러SOFR금리액티브(합성)"},
+    # 2026-08-25 재정정: RISE 미국달러SOFR금리액티브(455960)는 합성(스왑형) 상품이라
+    # IRP에서 매매 불가 확인됨. 실물복제형인 TIGER 미국달러단기채권액티브(329750, 실제
+    # 미국채·미국달러표시 투자등급회사채 직접보유)로 교체 — 메인계좌 STC_GROUP 예비옵션과 동일 상품.
+    "SCHP_PEN":  {"ticker": "329750.KS", "qty": 878, "name": "TIGER 미국달러단기채권액티브 (실물복제)"},
 }
 # 매도 대상(정리 예정) — 실제 보유수량 반영, 자동 시세조회
 IRP_SELL_TARGETS = {
@@ -179,15 +180,15 @@ STATE_FILE = "phase_state.json"
 
 # 보유 수량 (매매 시 직접 갱신)
 HOLDINGS = {
-    "133690.KS": {"qty": 0,   "type": "kr", "name": "TIGER 미국나스닥100"},
-    "QQQ":       {"qty": 9,   "type": "us", "name": "QQQ (해외주식계좌, 나스닥100 그룹 일부 — 비과세공제 활용, 매수량 미정)"},
+    "133690.KS": {"qty": 41,   "type": "kr", "name": "TIGER 미국나스닥100"},
+    "QQQ":       {"qty": 0,   "type": "us", "name": "QQQ (해외주식계좌, 나스닥100 그룹 일부 — 비과세공제 활용, 매수량 미정)"},
     "360750.KS": {"qty": 0,   "type": "kr", "name": "TIGER 미국S&P500"},
-    "102110.KS": {"qty": 15,  "type": "kr", "name": "TIGER 200"},
+    "102110.KS": {"qty": 19,  "type": "kr", "name": "TIGER 200"},
     "0072R0.KS": {"qty": 0,   "type": "kr", "name": "TIGER KRX금현물"},
     # GLD(미국상장) — 2026-08 매도 완료. 매도대금은 TIGER KRX금현물 등 v4.0 재배분에 사용.
     "GLD":       {"qty": 0,   "type": "us", "name": "GLD (2026-08-25 전량매도 예정 — 금현물계좌/0072R0.KS로 일원화)"},
-    "455960.KS": {"qty": 0,   "type": "kr", "name": "RISE 미국달러SOFR금리액티브(합성) — 신규매수 예정, 환노출(달러익스포저 의도적 유지)"},
-    "468370.KS": {"qty": 917, "type": "kr", "name": "KODEX 미국인플레이션국채액티브"},
+    "455960.KS": {"qty": 202,   "type": "kr", "name": "RISE 미국달러SOFR금리액티브(합성) — 신규매수 예정, 환노출(달러익스포저 의도적 유지)"},
+    "468370.KS": {"qty": 0, "type": "kr", "name": "KODEX 미국인플레이션국채액티브"},
     "329750.KS": {"qty": 0,  "type": "kr", "name": "TIGER 미국달러단기채권액티브"},
     # 정리 대상 — 2026-08 전량 매도 완료: 4.9% 대출 2,872만원 상환 +
     # 잔여는 ISA 국내상장 ETF(TIGER 미국나스닥100 등)로 재편입.
@@ -208,6 +209,54 @@ NASDAQ_GROUP = ("133690.KS", "QQQ")
 # 금 슬롯 그룹 — TIGER KRX금현물(국내) + GLD(해외, 연 250만원 비과세 공제 활용 목적)
 # 고정 비율 없이 보유한 만큼 합산해 목표 20%에 반영 (BRK.B와 같은 취지)
 GOLD_GROUP = ("0072R0.KS", "GLD")
+# 2026-08-25 신규: KRX 금현물계좌에서 g단위로 직접 매수하는 실물 보유분.
+# ETF(0072R0.KS)와 별개 — 공공데이터포털(data.go.kr) "금융위원회_일반상품시세정보"의
+# 금시세 오퍼레이션으로 KRX 금현물(1kg시장) 실제 종가를 조회(원/g). T+1 지연(전영업일 종가,
+# 익영업일 오후1시 이후 갱신)이지만 사용자 확인상 하루 지연이어도 실용적으로 충분.
+# API 실패 시 GC=F(국제 금선물) 근사로 자동 폴백(단, 국내 프리미엄 약 12%p 오차 있음— 확인됨).
+KRX_GOLD_API_KEY = "aucqSG%2FEW8%2FIRI1T%2BN3fvVDrTf1UmByJgw5apTl5%2FvHR5LP0ehyPbe2mZzXKtXwTVwggS1l%2BvtJ%2BPcKnmLXOIg%3D%3D"
+GOLD_GRAMS_QTY = 15  # 보유 그램수 — 매수 후 이 값을 직접 갱신
+
+
+def get_krx_gold_price():
+    """
+    공공데이터포털 금융위원회_일반상품시세정보 - 금시세 오퍼레이션으로 KRX 금현물
+    종가(원/g) 조회. 엔드포인트는 유사 서비스(파생상품시세정보) 명명규칙으로 추정한
+    값이라 최초 실행 시 검증 필요 — 실패하면 로그에 오류를 남기고 None 반환(자동 폴백).
+    """
+    try:
+        url = ("https://apis.data.go.kr/1160100/service/GetGeneralProductInfoService/getGoldPriceInfo"
+               f"?serviceKey={KRX_GOLD_API_KEY}&resultType=json&numOfRows=1&pageNo=1")
+        r = requests.get(url, timeout=10)
+        data = r.json()
+        item = data["response"]["body"]["items"]["item"]
+        if isinstance(item, list):
+            item = item[0]
+        price = float(item.get("clpr") or item.get("closePrice") or item.get("price"))
+        return price
+    except Exception as e:
+        print(f"[경고] KRX 금시세 API 조회 실패({type(e).__name__}) — GC=F 근사로 폴백")
+        return None
+
+
+def get_gold_gram_value(usdkrw):
+    """금현물계좌 보유분(그램)의 원화 평가액 계산. KRX 공식시세 우선, 실패 시 GC=F 근사 폴백."""
+    if GOLD_GRAMS_QTY <= 0:
+        return 0.0
+    krw_per_gram = get_krx_gold_price()
+    if krw_per_gram is not None:
+        return krw_per_gram * GOLD_GRAMS_QTY
+    if usdkrw is None:
+        return 0.0
+    try:
+        h = yf.Ticker("GC=F").history(period="5d").dropna(subset=["Close"])
+        if h is None or not len(h):
+            return 0.0
+        usd_per_oz = float(h["Close"].iloc[-1])
+        krw_per_gram = usd_per_oz * usdkrw / 31.1035
+        return krw_per_gram * GOLD_GRAMS_QTY
+    except Exception:
+        return 0.0
 BTC_ADDRESS = "bc1q57h8sn3ykge2yh2kn46dq5gsqn92x7pl6uanlg"
 
 
@@ -428,7 +477,7 @@ def get_portfolio(phase, usdkrw, prices):
         if slot == "STC":
             slot_values[slot] = sum(values.get(t, 0.0) for t in STC_GROUP)
         elif slot == "0072R0.KS":
-            slot_values[slot] = sum(values.get(t, 0.0) for t in GOLD_GROUP)
+            slot_values[slot] = sum(values.get(t, 0.0) for t in GOLD_GROUP) + get_gold_gram_value(usdkrw)
         elif slot == "133690.KS":
             slot_values[slot] = sum(values.get(t, 0.0) for t in NASDAQ_GROUP)
         else:
@@ -448,6 +497,10 @@ def get_portfolio(phase, usdkrw, prices):
              "value": round(values.get(t, 0.0))}
             for t in tickers if HOLDINGS.get(t, {}).get("qty", 0) > 0
         ]
+        if slot == "0072R0.KS" and GOLD_GRAMS_QTY > 0:
+            detail.append({"ticker": "GOLD_GRAM", "name": "금현물계좌(실물)",
+                            "qty": GOLD_GRAMS_QTY, "unit": "g",
+                            "value": round(get_gold_gram_value(usdkrw))})
         rows.append({
             "slot": slot, "target": tgt, "cur": round(cur_pct, 1),
             "diff": round(cur_pct - tgt, 1), "band": round(band, 1),
@@ -579,7 +632,7 @@ def build_html(now, close, ma200, dev, phase, changed, reason, rows, total, excl
         if not detail:
             return '<div style="color:#cbd5e1;font-size:10px;margin-top:2px">보유 없음</div>'
         return "".join(
-            f'<div style="color:#94a3b8;font-size:10px;margin-top:2px">{it["name"]} · {it["qty"]}주 · {it["value"]:,}원</div>'
+            f'<div style="color:#94a3b8;font-size:10px;margin-top:2px">{it["name"]} · {it["qty"]}{it.get("unit","주")} · {it["value"]:,}원</div>'
             for it in detail
         )
     rebal = "".join(
