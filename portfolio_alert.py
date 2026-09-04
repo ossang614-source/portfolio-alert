@@ -180,14 +180,14 @@ STATE_FILE = "phase_state.json"
 
 # 보유 수량 (매매 시 직접 갱신)
 HOLDINGS = {
-    "133690.KS": {"qty": 34,   "type": "kr", "name": "TIGER 미국나스닥100"},
+    "133690.KS": {"qty": 39,   "type": "kr", "name": "TIGER 미국나스닥100"},
     "QQQ":       {"qty": 0,   "type": "us", "name": "QQQ (해외주식계좌, 나스닥100 그룹 일부 — 비과세공제 활용, 매수량 미정)"},
     "360750.KS": {"qty": 0,   "type": "kr", "name": "TIGER 미국S&P500"},
     "102110.KS": {"qty": 19,  "type": "kr", "name": "TIGER 200"},
-    "0072R0.KS": {"qty": 114,   "type": "kr", "name": "TIGER KRX금현물"},
+    "0072R0.KS": {"qty": 0,   "type": "kr", "name": "TIGER KRX금현물"},
     # GLD(미국상장) — 2026-08 매도 완료. 매도대금은 TIGER KRX금현물 등 v4.0 재배분에 사용.
     "GLD":       {"qty": 0,   "type": "us", "name": "GLD (2026-08-25 전량매도 예정 — 금현물계좌/0072R0.KS로 일원화)"},
-    "455960.KS": {"qty": 202,   "type": "kr", "name": "RISE 미국달러SOFR금리액티브(합성) — 신규매수 예정, 환노출(달러익스포저 의도적 유지)"},
+    "455960.KS": {"qty": 253,   "type": "kr", "name": "RISE 미국달러SOFR금리액티브(합성) — 신규매수 예정, 환노출(달러익스포저 의도적 유지)"},
     "468370.KS": {"qty": 0, "type": "kr", "name": "KODEX 미국인플레이션국채액티브"},
     "329750.KS": {"qty": 0,  "type": "kr", "name": "TIGER 미국달러단기채권액티브"},
     # 정리 대상 — 2026-08 전량 매도 완료: 4.9% 대출 2,872만원 상환 +
