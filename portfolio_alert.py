@@ -215,7 +215,7 @@ GOLD_GROUP = ("0072R0.KS", "GLD")
 # 익영업일 오후1시 이후 갱신)이지만 사용자 확인상 하루 지연이어도 실용적으로 충분.
 # API 실패 시 GC=F(국제 금선물) 근사로 자동 폴백(단, 국내 프리미엄 약 12%p 오차 있음— 확인됨).
 KRX_GOLD_API_KEY = "aucqSG%2FEW8%2FIRI1T%2BN3fvVDrTf1UmByJgw5apTl5%2FvHR5LP0ehyPbe2mZzXKtXwTVwggS1l%2BvtJ%2BPcKnmLXOIg%3D%3D"
-GOLD_GRAMS_QTY = 36  # 보유 그램수 — 매수 후 이 값을 직접 갱신
+GOLD_GRAMS_QTY = 42  # 보유 그램수 — 매수 후 이 값을 직접 갱신
 
 
 def get_krx_gold_price():
