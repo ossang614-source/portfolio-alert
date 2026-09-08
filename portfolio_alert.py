@@ -183,7 +183,7 @@ HOLDINGS = {
     "133690.KS": {"qty": 43,   "type": "kr", "name": "TIGER 미국나스닥100"},
     "QQQ":       {"qty": 0,   "type": "us", "name": "QQQ (해외주식계좌, 나스닥100 그룹 일부 — 비과세공제 활용, 매수량 미정)"},
     "360750.KS": {"qty": 0,   "type": "kr", "name": "TIGER 미국S&P500"},
-    "102110.KS": {"qty": 25,  "type": "kr", "name": "TIGER 200"},
+    "102110.KS": {"qty": 27,  "type": "kr", "name": "TIGER 200"},
     "0072R0.KS": {"qty": 0,   "type": "kr", "name": "TIGER KRX금현물"},
     # GLD(미국상장) — 2026-08 매도 완료. 매도대금은 TIGER KRX금현물 등 v4.0 재배분에 사용.
     "GLD":       {"qty": 0,   "type": "us", "name": "GLD (2026-08-25 전량매도 예정 — 금현물계좌/0072R0.KS로 일원화)"},
