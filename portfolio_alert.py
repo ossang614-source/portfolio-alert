@@ -115,13 +115,13 @@ PENSION_SLOT_NAMES = {
 # 연금저축·IRP 보유 현황 — 상품명은 실제 계좌 상품으로 매칭해 직접 채울 것
 PENSION_HOLDINGS = {
     "연금저축": {
-        "QQQ_PEN":   {"value": 7692037,          "name": "한국투자GoldmanSachs미국테크(UH)C-Pe — 신규매수 필요, 담보가능(파생형아님)"},
-        "SP500_PEN": {"value": 31246398,  "name": "삼성미국S&P500인덱스증권자투자신탁UH_C — 보유중, 비중확대 필요"},
-        "GOLD_PEN":  {"value": 17303109, "name": "KB스타골드특별자산투자신탁C-Pe"},
-        "STC_PEN":   {"value": 10329425,  "name": "NH-Amundi USD초단기채권 (비중확대 필요, 삼성/KB단기채는 매도예정)"},
-        "매도대상_기타": {"value": 2066468+7692037,
+        "QQQ_PEN":   {"value": 12877418,  "name": "한국투자GoldmanSachs미국테크(UH)C-Pe — 신규매수 필요, 담보가능(파생형아님)"},
+        "SP500_PEN": {"value": 30671635,  "name": "삼성미국S&P500인덱스증권자투자신탁UH_C — 보유중, 비중확대 필요"},
+        "GOLD_PEN":  {"value": 21798627, "name": "KB스타골드특별자산투자신탁C-Pe"},
+        "STC_PEN":   {"value": 7521774,  "name": "NH-Amundi USD초단기채권 (비중확대 필요, 삼성/KB단기채는 매도예정)"},
+        "매도대상_기타": {"value": 0,
                        "name": "삼성달러표시단기채권+KB글로벌단기채(→NH-Amundi로 통합)+NH-Amundi필승코리아(코스피, 매도)"},
-        "현금": {"value": 0, "name": "현금"},
+        "현금": {"value": 3829, "name": "현금"},
     },
 }
 
@@ -135,7 +135,7 @@ IRP_HOLDINGS = {
     # 2026-08-25 재정정: RISE 미국달러SOFR금리액티브(455960)는 합성(스왑형) 상품이라
     # IRP에서 매매 불가 확인됨. 실물복제형인 TIGER 미국달러단기채권액티브(329750, 실제
     # 미국채·미국달러표시 투자등급회사채 직접보유)로 교체 — 메인계좌 STC_GROUP 예비옵션과 동일 상품.
-    "SCHP_PEN":  {"ticker": "329750.KS", "qty": 878, "name": "TIGER 미국달러단기채권액티브 (실물복제)"},
+    "SCHP_PEN":  {"ticker": "329750.KS", "qty": 884, "name": "TIGER 미국달러단기채권액티브 (실물복제)"},
 }
 # 매도 대상(정리 예정) — 실제 보유수량 반영, 자동 시세조회
 IRP_SELL_TARGETS = {
@@ -180,10 +180,10 @@ STATE_FILE = "phase_state.json"
 
 # 보유 수량 (매매 시 직접 갱신)
 HOLDINGS = {
-    "133690.KS": {"qty": 39,   "type": "kr", "name": "TIGER 미국나스닥100"},
+    "133690.KS": {"qty": 43,   "type": "kr", "name": "TIGER 미국나스닥100"},
     "QQQ":       {"qty": 0,   "type": "us", "name": "QQQ (해외주식계좌, 나스닥100 그룹 일부 — 비과세공제 활용, 매수량 미정)"},
     "360750.KS": {"qty": 0,   "type": "kr", "name": "TIGER 미국S&P500"},
-    "102110.KS": {"qty": 19,  "type": "kr", "name": "TIGER 200"},
+    "102110.KS": {"qty": 25,  "type": "kr", "name": "TIGER 200"},
     "0072R0.KS": {"qty": 0,   "type": "kr", "name": "TIGER KRX금현물"},
     # GLD(미국상장) — 2026-08 매도 완료. 매도대금은 TIGER KRX금현물 등 v4.0 재배분에 사용.
     "GLD":       {"qty": 0,   "type": "us", "name": "GLD (2026-08-25 전량매도 예정 — 금현물계좌/0072R0.KS로 일원화)"},
@@ -215,7 +215,7 @@ GOLD_GROUP = ("0072R0.KS", "GLD")
 # 익영업일 오후1시 이후 갱신)이지만 사용자 확인상 하루 지연이어도 실용적으로 충분.
 # API 실패 시 GC=F(국제 금선물) 근사로 자동 폴백(단, 국내 프리미엄 약 12%p 오차 있음— 확인됨).
 KRX_GOLD_API_KEY = "aucqSG%2FEW8%2FIRI1T%2BN3fvVDrTf1UmByJgw5apTl5%2FvHR5LP0ehyPbe2mZzXKtXwTVwggS1l%2BvtJ%2BPcKnmLXOIg%3D%3D"
-GOLD_GRAMS_QTY = 42  # 보유 그램수 — 매수 후 이 값을 직접 갱신
+GOLD_GRAMS_QTY = 44  # 보유 그램수 — 매수 후 이 값을 직접 갱신(신한, 삼성)
 
 
 def get_krx_gold_price():
