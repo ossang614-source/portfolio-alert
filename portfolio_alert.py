@@ -180,7 +180,7 @@ STATE_FILE = "phase_state.json"
 
 # 보유 수량 (매매 시 직접 갱신)
 HOLDINGS = {
-    "133690.KS": {"qty": 43,   "type": "kr", "name": "TIGER 미국나스닥100"},
+    "133690.KS": {"qty": 45,   "type": "kr", "name": "TIGER 미국나스닥100"},
     "QQQ":       {"qty": 0,   "type": "us", "name": "QQQ (해외주식계좌, 나스닥100 그룹 일부 — 비과세공제 활용, 매수량 미정)"},
     "360750.KS": {"qty": 0,   "type": "kr", "name": "TIGER 미국S&P500"},
     "102110.KS": {"qty": 30,  "type": "kr", "name": "TIGER 200"},
@@ -215,7 +215,7 @@ GOLD_GROUP = ("0072R0.KS", "GLD")
 # 익영업일 오후1시 이후 갱신)이지만 사용자 확인상 하루 지연이어도 실용적으로 충분.
 # API 실패 시 GC=F(국제 금선물) 근사로 자동 폴백(단, 국내 프리미엄 약 12%p 오차 있음— 확인됨).
 KRX_GOLD_API_KEY = "aucqSG%2FEW8%2FIRI1T%2BN3fvVDrTf1UmByJgw5apTl5%2FvHR5LP0ehyPbe2mZzXKtXwTVwggS1l%2BvtJ%2BPcKnmLXOIg%3D%3D"
-GOLD_GRAMS_QTY = 47  # 보유 그램수 — 매수 후 이 값을 직접 갱신(신한, 삼성)
+GOLD_GRAMS_QTY = 50  # 보유 그램수 — 매수 후 이 값을 직접 갱신(신한, 삼성)
 
 
 def get_krx_gold_price():
